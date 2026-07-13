@@ -1,0 +1,216 @@
+---
+import '../styles/landing.css';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const _docsUrl = `${base}/getting-started/`;
+const _conceptsUrl = `${base}/concepts/`;
+const _securityUrl = `${base}/guides/security/`;
+const _githubUrl = 'https://github.com/chaitanyarahalkar/connect';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta
+      name="description"
+      content="Connect is the open-source credential broker for agents and services. Mint short-lived, scoped provider tokens at runtime."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:title" content="Connect — Secure access to every API" />
+    <meta
+      property="og:description"
+      content="Call third-party APIs without storing long-lived provider secrets."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://chaitanyarahalkar.github.io/connect/" />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+    <title>Connect — Secure access to every API</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={`${base}/`} aria-label="Connect home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>Connect</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href={_conceptsUrl}>Concepts</a>
+        <a href={_securityUrl}>Security</a>
+        <a href={_githubUrl}>GitHub</a>
+      </nav>
+
+      <a class="header-cta" href={_docsUrl}>Read the docs <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="hero shell">
+        <a class="eyebrow" href={_githubUrl}>
+          <span class="eyebrow-dot"></span>
+          Open source and ready to self-host
+          <span aria-hidden="true">→</span>
+        </a>
+
+        <h1>Secure access<br />to every API.</h1>
+        <p class="hero-copy">
+          Connect gives agents and services short-lived, scoped credentials at runtime—without
+          putting provider secrets in code, databases, or environment variables.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href={_docsUrl}>Start building <span>→</span></a>
+          <a class="button button-secondary" href={_githubUrl}>View on GitHub</a>
+        </div>
+
+        <div class="product-window" aria-label="Connect SDK example">
+          <div class="window-bar">
+            <div class="window-title">
+              <span class="status-dot"></span>
+              token.ts
+            </div>
+            <div class="window-meta">@connect/sdk</div>
+          </div>
+          <div class="code-grid">
+            <pre class="code-block"><code><span class="line"><span class="line-no">1</span><span><b>import</b> &#123; getToken &#125; <b>from</b> <em>'@connect/sdk'</em>;</span></span>
+<span class="line"><span class="line-no">2</span><span></span></span>
+<span class="line"><span class="line-no">3</span><span><b>const</b> &#123; token &#125; = <b>await</b> getToken(&#123;</span></span>
+<span class="line"><span class="line-no">4</span><span>  connector: <em>'github'</em>,</span></span>
+<span class="line"><span class="line-no">5</span><span>  scopes: [<em>'repo'</em>],</span></span>
+<span class="line"><span class="line-no">6</span><span>&#125;);</span></span></code></pre>
+            <div class="token-panel">
+              <div class="token-heading">
+                <span>Credential</span>
+                <span class="live-badge">LIVE</span>
+              </div>
+              <dl>
+                <div><dt>Provider</dt><dd>GitHub</dd></div>
+                <div><dt>Scope</dt><dd>repo</dd></div>
+                <div><dt>Expires</dt><dd>in 09:42</dd></div>
+              </dl>
+              <div class="token-value"><span>gho_</span>••••••••••••<span>7f2</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="provider-strip" aria-label="Supported provider patterns">
+        <p>One interface for the APIs your product depends on</p>
+        <div class="provider-list" aria-hidden="true">
+          <span>GitHub</span>
+          <span>Slack</span>
+          <span>Google</span>
+          <span>Salesforce</span>
+          <span>Any OAuth 2.0 API</span>
+        </div>
+      </section>
+
+      <section class="section shell">
+        <div class="section-kicker"><span>01</span> The model</div>
+        <div class="section-intro">
+          <h2>Secrets should be temporary.</h2>
+          <p>
+            Authorize each provider once. Connect handles storage, rotation, scoping, and delivery
+            from then on.
+          </p>
+        </div>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-top"><span>01</span><span class="step-symbol">＋</span></div>
+            <h3>Configure</h3>
+            <p>Register an OAuth app or API key as an organization-owned connector.</p>
+          </article>
+          <article class="step">
+            <div class="step-top"><span>02</span><span class="step-symbol">◇</span></div>
+            <h3>Authorize</h3>
+            <p>Let each user or workspace grant access through a standard provider flow.</p>
+          </article>
+          <article class="step">
+            <div class="step-top"><span>03</span><span class="step-symbol">↗</span></div>
+            <h3>Request</h3>
+            <p>Mint a short-lived token exactly when your workload needs to make a call.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section security-section">
+        <div class="security-inner shell">
+          <div class="security-copy">
+            <div class="section-kicker section-kicker-dark"><span>02</span> Built secure by default</div>
+            <h2>Provider secrets never reach your code.</h2>
+            <p>
+              Every credential is encrypted at rest, bound to an identity and environment, and
+              exchanged only for the minimum access your workload requested.
+            </p>
+            <a href={_securityUrl}>Explore the security model <span>→</span></a>
+          </div>
+
+          <div class="security-terminal" aria-label="Token request lifecycle">
+            <div class="terminal-title"><span>Request lifecycle</span><span>38ms</span></div>
+            <ol>
+              <li><span class="check">✓</span><div><b>Identity verified</b><small>workload_7d2 · production</small></div><time>4ms</time></li>
+              <li><span class="check">✓</span><div><b>Policy evaluated</b><small>github-main · repo:read</small></div><time>2ms</time></li>
+              <li><span class="check">✓</span><div><b>Credential decrypted</b><small>AES-256-GCM · key v3</small></div><time>9ms</time></li>
+              <li><span class="check">✓</span><div><b>Scoped token issued</b><small>expires in 10 minutes</small></div><time>23ms</time></li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell capabilities-section">
+        <div class="section-kicker"><span>03</span> Infrastructure, included</div>
+        <div class="section-intro">
+          <h2>One connection layer.<br />Every environment.</h2>
+          <p>Use Connect locally, run it in your cloud, or build it into your own platform.</p>
+        </div>
+
+        <div class="capability-grid">
+          <article>
+            <span class="cap-index">A</span>
+            <h3>Runtime token broker</h3>
+            <p>Encrypted caching, refresh-ahead, and single-flight rotation across your fleet.</p>
+          </article>
+          <article>
+            <span class="cap-index">B</span>
+            <h3>Verified webhooks</h3>
+            <p>Validate provider signatures, prevent replays, and fan out signed deliveries.</p>
+          </article>
+          <article>
+            <span class="cap-index">C</span>
+            <h3>Workload identity</h3>
+            <p>Authenticate services with short-lived OIDC identity instead of shared secrets.</p>
+          </article>
+          <article>
+            <span class="cap-index">D</span>
+            <h3>Audit by design</h3>
+            <p>Record every issuance and delivery without ever persisting token material.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta-section shell">
+        <div class="cta-grid"></div>
+        <div class="cta-content">
+          <div class="brand-mark brand-mark-large" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <h2>Build without<br />the secret sprawl.</h2>
+          <p>Open source. Self-hostable. Designed for agents, services, and the teams behind them.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href={_docsUrl}>Read the docs <span>→</span></a>
+            <a class="button button-secondary" href={_githubUrl}>Star on GitHub</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer shell">
+      <a class="brand" href={`${base}/`}><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Connect</span></a>
+      <p>Credential infrastructure for modern software.</p>
+      <div class="footer-links">
+        <a href={_docsUrl}>Docs</a>
+        <a href={_githubUrl}>GitHub</a>
+        <a href="https://github.com/chaitanyarahalkar/connect/blob/main/LICENSE">MIT License</a>
+      </div>
+    </footer>
+  </body>
+</html>
