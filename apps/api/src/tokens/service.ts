@@ -7,12 +7,14 @@ import { meterUsage } from '../audit.js';
 import { TokenCache, cacheKey, type CachedToken } from './cache.js';
 import { singleFlight } from './lock.js';
 import { mintApiKeyToken, type ConnectorRow, type InstallationRow, type Minter } from './minters.js';
+import { mintOAuth2Token } from './oauth2-minter.js';
 
 const minters: Partial<Record<ConnectorRow['type'], Minter>> = {
   api_key: mintApiKeyToken,
+  oauth2: mintOAuth2Token,
 };
 
-/** Later milestones plug in oauth2/github/slack minters here. */
+/** Later milestones plug in github/slack minters here. */
 export function registerMinter(type: ConnectorRow['type'], minter: Minter): void {
   minters[type] = minter;
 }
@@ -158,6 +160,9 @@ async function resolveInstallation(
   req: TokenRequest,
 ): Promise<InstallationRow | null> {
   if (connector.type === 'api_key') return null;
+
+  // jwt-bearer exchanges carry their own identity; an installation is optional
+  if (req.subject.type === 'jwt-bearer' && !req.installationId) return null;
 
   if (req.installationId) {
     const [row] = await deps.db
