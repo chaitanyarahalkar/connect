@@ -1,0 +1,25 @@
+{
+  "name": "@connect/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "connect": "./bin/connect.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@connect/sdk": "workspace:*",
+    "@connect/shared": "workspace:*",
+    "commander": "^13.0.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

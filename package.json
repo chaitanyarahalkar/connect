@@ -1,0 +1,28 @@
+{
+  "name": "connect",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "db:migrate": "pnpm --filter @connect/db migrate",
+    "db:seed": "pnpm --filter @connect/db seed",
+    "demo": "pnpm --filter @connect/api demo"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.10.1"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
