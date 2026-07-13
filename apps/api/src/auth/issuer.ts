@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { signingKeys, type Db } from '@connect/db';
 import {
   JwtSigner,
@@ -40,13 +40,21 @@ export class IssuerService {
       .select()
       .from(signingKeys)
       .where(eq(signingKeys.active, true))
+      .orderBy(desc(signingKeys.createdAt))
       .limit(1);
     if (row) {
-      const privatePem = decryptSecret(
-        this.kp,
-        secretAad('signing_keys', row.id, 'private_key'),
-        row.privateKeyCiphertext as EncryptedBlob,
-      );
+      let privatePem: string;
+      try {
+        privatePem = decryptSecret(
+          this.kp,
+          secretAad('signing_keys', row.id, 'private_key'),
+          row.privateKeyCiphertext as EncryptedBlob,
+        );
+      } catch (err) {
+        throw new Error(
+          `cannot decrypt signing key ${row.id}: CONNECT_MASTER_KEY does not match the key that encrypted it (${String(err)})`,
+        );
+      }
       this.signer = await JwtSigner.fromPem({
         kid: row.id,
         privatePem,

@@ -25,6 +25,11 @@ import {
 import { storeSeedSecret } from '@connect/db/seed-secrets';
 import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
 import { getToken, clearTokenCache } from '@connect/sdk';
+import { loadDotEnv } from '../src/config.js';
+
+// Use the repo .env when present so the master key stays stable across runs
+// (signing keys and seeded secrets in the dev DB are encrypted under it).
+loadDotEnv();
 
 const API = 'http://localhost:4000';
 const MOCK = 'http://localhost:4100';
@@ -229,6 +234,7 @@ async function main() {
       client_secret: client.client.clientSecret,
     }),
   });
+  if (!oidc.ok) throw new Error(`client-credentials exchange failed: ${oidc.status} ${await oidc.text()}`);
   const { access_token } = (await oidc.json()) as { access_token: string };
   const viaWorkload = (await api('/v1/tokens', access_token, { connector: 'internal-api' })) as {
     token: string;
