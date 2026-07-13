@@ -5,6 +5,7 @@ import {
   ConnectError,
   createConnectorSchema,
   oauthConfigSchema,
+  snowflakeConfigSchema,
   tokenPolicySchema,
 } from '@connect/shared';
 import { zValidator } from '@hono/zod-validator';
@@ -24,6 +25,7 @@ const SECRET_KIND_MAP = {
   webhookSecret: 'webhook_secret',
   githubAppPrivateKey: 'github_app_private_key',
   slackSigningSecret: 'slack_signing_secret',
+  snowflakePrivateKey: 'snowflake_private_key',
 } as const;
 
 function serialize(row: typeof connectors.$inferSelect) {
@@ -36,6 +38,7 @@ function serialize(row: typeof connectors.$inferSelect) {
     status: row.status,
     branding: row.branding,
     oauthConfig: row.oauthConfig,
+    providerConfig: row.providerConfig,
     tokenPolicy: row.tokenPolicy,
     clientId: row.clientId,
     ingestKey: row.ingestKey,
@@ -68,6 +71,16 @@ export function connectorRoutes(deps: AppDeps) {
     ) {
       throw new ConnectError('validation_error', `${input.type} connectors require oauthConfig`);
     }
+    if (input.type === 'snowflake') {
+      const parsed = snowflakeConfigSchema.safeParse(input.providerConfig ?? {});
+      if (!parsed.success) {
+        throw new ConnectError(
+          'validation_error',
+          'snowflake connectors require providerConfig with account and username',
+        );
+      }
+      input.providerConfig = parsed.data;
+    }
 
     const id = newId.connector();
     const [row] = await deps.db
@@ -80,6 +93,7 @@ export function connectorRoutes(deps: AppDeps) {
         type: input.type,
         branding: input.branding ?? null,
         oauthConfig: input.oauthConfig ?? null,
+        providerConfig: input.providerConfig ?? null,
         tokenPolicy: input.tokenPolicy ?? null,
         clientId: input.secrets?.oauthClientId ?? null,
         ingestKey: randomToken(24),
@@ -131,6 +145,7 @@ export function connectorRoutes(deps: AppDeps) {
         status: z.enum(['active', 'disabled']).optional(),
         branding: brandingSchema.optional(),
         oauthConfig: oauthConfigSchema.optional(),
+        providerConfig: z.record(z.unknown()).optional(),
         tokenPolicy: tokenPolicySchema.nullable().optional(),
       }),
     ),
@@ -146,12 +161,20 @@ export function connectorRoutes(deps: AppDeps) {
           ...(input.status ? { status: input.status } : {}),
           ...(input.branding ? { branding: input.branding } : {}),
           ...(input.oauthConfig ? { oauthConfig: input.oauthConfig } : {}),
+          ...(input.providerConfig
+            ? {
+                providerConfig:
+                  row.type === 'snowflake'
+                    ? snowflakeConfigSchema.parse(input.providerConfig)
+                    : input.providerConfig,
+              }
+            : {}),
           ...(input.tokenPolicy !== undefined ? { tokenPolicy: input.tokenPolicy } : {}),
         })
         .where(eq(connectors.id, row.id))
         .returning();
-      // policy changes must not be served stale from the token cache
-      if (input.status === 'disabled' || input.tokenPolicy !== undefined) {
+      // policy/config changes must not be served stale from the token cache
+      if (input.status === 'disabled' || input.tokenPolicy !== undefined || input.providerConfig) {
         await new TokenCache(deps.redis, deps.keyProvider).invalidateConnector(row.id);
       }
       await writeAudit(deps.db, principal, {
@@ -176,6 +199,7 @@ export function connectorRoutes(deps: AppDeps) {
         webhookSecret: z.string().optional(),
         githubAppPrivateKey: z.string().optional(),
         slackSigningSecret: z.string().optional(),
+        snowflakePrivateKey: z.string().optional(),
       }),
     ),
     async (c) => {

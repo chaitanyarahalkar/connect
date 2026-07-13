@@ -1,10 +1,13 @@
-import type { OAuthConfig } from '@connect/shared';
+import type { OAuthConfig, SnowflakeConfig } from '@connect/shared';
 
 export interface ConnectorPreset {
   key: string;
   name: string;
-  type: 'oauth2' | 'github' | 'slack';
-  oauthConfig: Omit<OAuthConfig, 'scopesDefault'> & { scopesDefault: string[] };
+  type: 'oauth2' | 'github' | 'slack' | 'snowflake';
+  /** Present on OAuth-based presets. */
+  oauthConfig?: Omit<OAuthConfig, 'scopesDefault'> & { scopesDefault: string[] };
+  /** Present on non-OAuth presets (snowflake). Values the operator must fill. */
+  providerConfigTemplate?: Partial<SnowflakeConfig>;
   docsUrl?: string;
 }
 
@@ -38,6 +41,46 @@ export const PRESETS: ConnectorPreset[] = [
       tokenEndpointAuth: 'post',
       quirksKey: 'slack',
     },
+  },
+  {
+    key: 'google',
+    name: 'Google',
+    type: 'oauth2',
+    docsUrl: 'https://developers.google.com/identity/protocols/oauth2/web-server',
+    oauthConfig: {
+      authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenEndpoint: 'https://oauth2.googleapis.com/token',
+      revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+      userinfoEndpoint: 'https://openidconnect.googleapis.com/v1/userinfo',
+      issuer: 'https://accounts.google.com',
+      scopesDefault: ['openid', 'email', 'profile'],
+      pkce: true,
+      tokenEndpointAuth: 'post',
+      quirksKey: 'google',
+    },
+  },
+  {
+    key: 'salesforce',
+    name: 'Salesforce',
+    type: 'oauth2',
+    docsUrl:
+      'https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_web_server_flow.htm',
+    oauthConfig: {
+      authorizationEndpoint: 'https://login.salesforce.com/services/oauth2/authorize',
+      tokenEndpoint: 'https://login.salesforce.com/services/oauth2/token',
+      revocationEndpoint: 'https://login.salesforce.com/services/oauth2/revoke',
+      scopesDefault: ['api', 'refresh_token'],
+      pkce: true,
+      tokenEndpointAuth: 'post',
+      quirksKey: 'salesforce',
+    },
+  },
+  {
+    key: 'snowflake',
+    name: 'Snowflake',
+    type: 'snowflake',
+    docsUrl: 'https://docs.snowflake.com/en/user-guide/key-pair-auth',
+    providerConfigTemplate: { tokenTtlSeconds: 3600 },
   },
 ];
 

@@ -31,6 +31,13 @@ interface SecretState {
   githubAppId: string;
   githubAppPrivateKey: string;
   slackSigningSecret: string;
+  snowflakePrivateKey: string;
+}
+
+interface SnowflakeState {
+  account: string;
+  username: string;
+  tokenTtlSeconds: string;
 }
 
 const EMPTY_ENDPOINTS: EndpointState = {
@@ -51,45 +58,96 @@ const EMPTY_SECRETS: SecretState = {
   githubAppId: '',
   githubAppPrivateKey: '',
   slackSigningSecret: '',
+  snowflakePrivateKey: '',
 };
 
-const PRESETS: Record<ConnectorType, Partial<EndpointState>> = {
-  api_key: {},
-  oauth2: {},
-  github: {
-    authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-    tokenEndpoint: 'https://github.com/login/oauth/access_token',
-    pkce: false,
-    quirksKey: 'github',
-  },
-  slack: {
-    authorizationEndpoint: 'https://slack.com/oauth/v2/authorize',
-    tokenEndpoint: 'https://slack.com/api/oauth.v2.access',
-    pkce: false,
-    quirksKey: 'slack',
-  },
-};
+const EMPTY_SNOWFLAKE: SnowflakeState = { account: '', username: '', tokenTtlSeconds: '3600' };
 
-const TYPE_CHOICES: Array<{ type: ConnectorType; title: string; description: string }> = [
+interface PresetChoice {
+  key: string;
+  type: ConnectorType;
+  title: string;
+  description: string;
+  /** Prefilled endpoint config for OAuth-based presets. */
+  endpoints?: Partial<EndpointState>;
+  /** Prefill the name/slug when picked. */
+  prefillName?: boolean;
+}
+
+const TYPE_CHOICES: PresetChoice[] = [
   {
+    key: 'api_key',
     type: 'api_key',
     title: 'API Key',
     description: 'Store a static API key and hand it to workloads on demand.',
   },
   {
+    key: 'oauth2',
     type: 'oauth2',
     title: 'Custom OAuth',
     description: 'Any OAuth 2.0 / OIDC provider. Discover endpoints from an issuer URL.',
   },
   {
+    key: 'github',
     type: 'github',
     title: 'GitHub',
     description: 'GitHub App / OAuth with installation tokens. Endpoints prefilled.',
+    prefillName: true,
+    endpoints: {
+      authorizationEndpoint: 'https://github.com/login/oauth/authorize',
+      tokenEndpoint: 'https://github.com/login/oauth/access_token',
+      pkce: false,
+      quirksKey: 'github',
+    },
   },
   {
+    key: 'slack',
     type: 'slack',
     title: 'Slack',
     description: 'Slack app OAuth with bot tokens. Endpoints prefilled.',
+    prefillName: true,
+    endpoints: {
+      authorizationEndpoint: 'https://slack.com/oauth/v2/authorize',
+      tokenEndpoint: 'https://slack.com/api/oauth.v2.access',
+      pkce: false,
+      quirksKey: 'slack',
+    },
+  },
+  {
+    key: 'google',
+    type: 'oauth2',
+    title: 'Google',
+    description: 'Google OAuth with offline refresh tokens. Endpoints prefilled.',
+    prefillName: true,
+    endpoints: {
+      authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenEndpoint: 'https://oauth2.googleapis.com/token',
+      issuer: 'https://accounts.google.com',
+      scopesDefault: 'openid, email, profile',
+      pkce: true,
+      quirksKey: 'google',
+    },
+  },
+  {
+    key: 'salesforce',
+    type: 'oauth2',
+    title: 'Salesforce',
+    description: 'Salesforce connected app OAuth. Endpoints prefilled.',
+    prefillName: true,
+    endpoints: {
+      authorizationEndpoint: 'https://login.salesforce.com/services/oauth2/authorize',
+      tokenEndpoint: 'https://login.salesforce.com/services/oauth2/token',
+      scopesDefault: 'api, refresh_token',
+      pkce: true,
+      quirksKey: 'salesforce',
+    },
+  },
+  {
+    key: 'snowflake',
+    type: 'snowflake',
+    title: 'Snowflake',
+    description: 'Key-pair auth: Connect signs short-lived KEYPAIR_JWTs locally.',
+    prefillName: true,
   },
 ];
 
@@ -98,12 +156,14 @@ export default function NewConnectorPage() {
   const { toast } = useToast();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [presetKey, setPresetKey] = useState<string | null>(null);
   const [type, setType] = useState<ConnectorType | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
   const [color, setColor] = useState('');
   const [endpoints, setEndpoints] = useState<EndpointState>(EMPTY_ENDPOINTS);
+  const [snowflake, setSnowflake] = useState<SnowflakeState>(EMPTY_SNOWFLAKE);
   const [secrets, setSecrets] = useState<SecretState>(EMPTY_SECRETS);
   const [issuerInput, setIssuerInput] = useState('');
   const [discovering, setDiscovering] = useState(false);
@@ -112,11 +172,11 @@ export default function NewConnectorPage() {
 
   const isOauthLike = type === 'oauth2' || type === 'github' || type === 'slack';
 
-  const chooseType = (t: ConnectorType) => {
-    setType(t);
-    setEndpoints({ ...EMPTY_ENDPOINTS, ...PRESETS[t] });
-    const choice = TYPE_CHOICES.find((c) => c.type === t);
-    if (!name && choice && (t === 'github' || t === 'slack')) {
+  const chooseType = (choice: PresetChoice) => {
+    setPresetKey(choice.key);
+    setType(choice.type);
+    setEndpoints({ ...EMPTY_ENDPOINTS, ...choice.endpoints });
+    if (!name && choice.prefillName) {
       setName(choice.title);
       if (!slugTouched) setSlug(slugify(choice.title));
     }
@@ -158,6 +218,9 @@ export default function NewConnectorPage() {
     if (isOauthLike && (!endpoints.authorizationEndpoint || !endpoints.tokenEndpoint)) {
       return 'Authorization and token endpoints are required';
     }
+    if (type === 'snowflake' && (!snowflake.account.trim() || !snowflake.username.trim())) {
+      return 'Snowflake account and username are required';
+    }
     return null;
   };
 
@@ -182,6 +245,13 @@ export default function NewConnectorPage() {
         pkce: endpoints.pkce,
         tokenEndpointAuth: endpoints.tokenEndpointAuth,
         ...(endpoints.quirksKey ? { quirksKey: endpoints.quirksKey } : {}),
+      };
+    }
+    if (type === 'snowflake') {
+      payload.providerConfig = {
+        account: snowflake.account.trim(),
+        username: snowflake.username.trim(),
+        tokenTtlSeconds: Number(snowflake.tokenTtlSeconds || '3600'),
       };
     }
     if (secretEntries.length > 0) {
@@ -230,11 +300,11 @@ export default function NewConnectorPage() {
       {step === 1 ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {TYPE_CHOICES.map((choice) => (
-            <button key={choice.type} type="button" onClick={() => chooseType(choice.type)}>
+            <button key={choice.key} type="button" onClick={() => chooseType(choice)}>
               <Card
                 className={cn(
                   'h-full text-left transition-colors hover:border-zinc-400',
-                  type === choice.type && 'border-zinc-900 ring-1 ring-zinc-900',
+                  presetKey === choice.key && 'border-zinc-900 ring-1 ring-zinc-900',
                 )}
               >
                 <CardContent className="p-5">
@@ -375,6 +445,44 @@ export default function NewConnectorPage() {
               </>
             ) : null}
 
+            {type === 'snowflake' ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="sf-account">Account identifier</Label>
+                    <Input
+                      id="sf-account"
+                      value={snowflake.account}
+                      onChange={(e) => setSnowflake((p) => ({ ...p, account: e.target.value }))}
+                      placeholder="xy12345 or xy12345.us-east-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sf-user">Username</Label>
+                    <Input
+                      id="sf-user"
+                      value={snowflake.username}
+                      onChange={(e) => setSnowflake((p) => ({ ...p, username: e.target.value }))}
+                      placeholder="SVC_ANALYTICS"
+                    />
+                  </div>
+                </div>
+                <div className="max-w-xs">
+                  <Label htmlFor="sf-ttl">JWT lifetime (seconds, max 3600)</Label>
+                  <Input
+                    id="sf-ttl"
+                    type="number"
+                    min={60}
+                    max={3600}
+                    value={snowflake.tokenTtlSeconds}
+                    onChange={(e) =>
+                      setSnowflake((p) => ({ ...p, tokenTtlSeconds: e.target.value }))
+                    }
+                  />
+                </div>
+              </>
+            ) : null}
+
             <div className="border-t border-zinc-100 pt-4">
               <p className="mb-3 text-sm font-medium text-zinc-900">
                 Credentials{' '}
@@ -431,6 +539,21 @@ export default function NewConnectorPage() {
                     onChange={(v) => setSecret('slackSigningSecret', v)}
                   />
                 ) : null}
+                {type === 'snowflake' ? (
+                  <div>
+                    <Label>RSA private key (PKCS#8 PEM)</Label>
+                    <textarea
+                      value={secrets.snowflakePrivateKey}
+                      onChange={(e) => setSecret('snowflakePrivateKey', e.target.value)}
+                      rows={4}
+                      placeholder="-----BEGIN PRIVATE KEY-----"
+                      className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-xs focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">
+                      The matching public key must be set on the Snowflake user via RSA_PUBLIC_KEY.
+                    </p>
+                  </div>
+                ) : null}
                 <SecretInput
                   label="Webhook secret (optional)"
                   value={secrets.webhookSecret}
@@ -478,6 +601,13 @@ export default function NewConnectorPage() {
                   <ReviewRow label="Token" value={endpoints.tokenEndpoint} mono />
                   <ReviewRow label="Scopes" value={endpoints.scopesDefault || '(none)'} mono />
                   <ReviewRow label="PKCE" value={endpoints.pkce ? 'yes' : 'no'} />
+                </>
+              ) : null}
+              {type === 'snowflake' ? (
+                <>
+                  <ReviewRow label="Account" value={snowflake.account} mono />
+                  <ReviewRow label="Username" value={snowflake.username} mono />
+                  <ReviewRow label="JWT TTL" value={`${snowflake.tokenTtlSeconds}s`} />
                 </>
               ) : null}
               <ReviewRow

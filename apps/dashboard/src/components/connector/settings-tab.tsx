@@ -19,6 +19,7 @@ interface SecretFields {
   githubAppId: string;
   githubAppPrivateKey: string;
   slackSigningSecret: string;
+  snowflakePrivateKey: string;
 }
 
 const EMPTY: SecretFields = {
@@ -29,6 +30,7 @@ const EMPTY: SecretFields = {
   githubAppId: '',
   githubAppPrivateKey: '',
   slackSigningSecret: '',
+  snowflakePrivateKey: '',
 };
 
 export function ConnectorSettingsTab({
@@ -104,7 +106,7 @@ export function ConnectorSettingsTab({
   const setSecret = (key: keyof SecretFields, value: string) =>
     setSecrets((prev) => ({ ...prev, [key]: value }));
 
-  const isOauthLike = connector.type !== 'api_key';
+  const isOauthLike = connector.type !== 'api_key' && connector.type !== 'snowflake';
 
   return (
     <div className="space-y-4">
@@ -180,6 +182,18 @@ export function ConnectorSettingsTab({
                 value={secrets.slackSigningSecret}
                 onChange={(v) => setSecret('slackSigningSecret', v)}
               />
+            ) : null}
+            {connector.type === 'snowflake' ? (
+              <div>
+                <Label>RSA private key (PKCS#8 PEM)</Label>
+                <textarea
+                  value={secrets.snowflakePrivateKey}
+                  onChange={(e) => setSecret('snowflakePrivateKey', e.target.value)}
+                  rows={4}
+                  placeholder="-----BEGIN PRIVATE KEY-----"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-xs focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                />
+              </div>
             ) : null}
             <SecretField
               label="Webhook secret"

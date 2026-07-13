@@ -15,6 +15,7 @@ import {
 } from './minters.js';
 import { mintOAuth2Token } from './oauth2-minter.js';
 import { clampTtl, enforceRateLimit, enforceTokenPolicy, tokenPolicyOf } from './policy.js';
+import { mintSnowflakeToken } from './snowflake-minter.js';
 
 const minters: Record<ConnectorRow['type'], Minter> = {
   api_key: mintApiKeyToken,
@@ -22,6 +23,8 @@ const minters: Record<ConnectorRow['type'], Minter> = {
   github: mintGithubToken,
   // Slack minting is plain OAuth refresh; the slack-ness lives in quirks.
   slack: mintOAuth2Token,
+  // Snowflake KEYPAIR_JWTs are signed locally from the stored private key.
+  snowflake: mintSnowflakeToken,
 };
 
 export async function requestToken(
@@ -172,7 +175,8 @@ async function resolveInstallation(
   connector: ConnectorRow,
   req: TokenRequest,
 ): Promise<InstallationRow | null> {
-  if (connector.type === 'api_key') return null;
+  // credential-holding connector types have no per-tenant installation
+  if (connector.type === 'api_key' || connector.type === 'snowflake') return null;
 
   // jwt-bearer exchanges carry their own identity; an installation is optional
   if (req.subject.type === 'jwt-bearer' && !req.installationId) return null;

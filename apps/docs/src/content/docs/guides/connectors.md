@@ -67,6 +67,31 @@ Prefills from `packages/connectors/src/presets.ts`:
 - Quirks: scopes are passed comma-joined; Slack's HTTP-200-`ok:false` errors are handled; user tokens nested under `authed_user` are parsed; refresh rotation is on; installations are labeled by workspace (`team.id`/`team.name`)
 - Set `slackSigningSecret` to enable inbound webhook verification (see [Triggers & webhooks](/connect/guides/triggers/))
 
+## Google preset
+
+- Authorize: `https://accounts.google.com/o/oauth2/v2/auth`, token: `https://oauth2.googleapis.com/token`, revocation + userinfo endpoints prefilled
+- Default scopes `openid`, `email`, `profile`; PKCE on
+- Quirks: `access_type=offline&prompt=consent` are always sent (without them Google only issues a refresh token on first consent); refresh tokens do not rotate; installations are labeled via the OIDC userinfo endpoint (email)
+
+## Salesforce preset
+
+- Authorize/token/revocation on `https://login.salesforce.com/services/oauth2/*`; PKCE on
+- Default scopes `api`, `refresh_token`
+- Quirks: Salesforce omits `expires_in`, so a 7200s policy TTL applies; installations are labeled from the token response's identity URL (org id + username). For sandboxes, switch the endpoints to `https://test.salesforce.com`.
+
+## Snowflake preset (key-pair JWT exchange)
+
+A `snowflake` connector holds an RSA private key and mints **KEYPAIR_JWTs locally** — no provider round-trip. Configure `providerConfig` (`account`, `username`, optional `tokenTtlSeconds` ≤ 3600) and store the PKCS#8 private key as `snowflakePrivateKey`; the matching public key must be registered on the Snowflake user (`ALTER USER … SET RSA_PUBLIC_KEY`).
+
+`getToken` returns a short-lived RS256 JWT with the fingerprinted issuer Snowflake expects (`ACCOUNT.USER.SHA256:<fp>`). Send it as:
+
+```
+Authorization: Bearer <token>
+X-Snowflake-Authorization-Token-Type: KEYPAIR_JWT
+```
+
+Only the `app` subject is supported; tokens are cached until expiry.
+
 ## Token policy
 
 Every connector can carry a `tokenPolicy` (set in the dashboard's Settings tab or via `PATCH /v1/connectors/:id`), enforced on every `POST /v1/tokens`:

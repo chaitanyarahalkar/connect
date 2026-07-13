@@ -19,7 +19,13 @@ export * from './auth-schema.js';
 
 export const roleEnum = pgEnum('role', ['owner', 'admin', 'member']);
 export const environmentEnum = pgEnum('environment', ['production', 'preview', 'development']);
-export const connectorTypeEnum = pgEnum('connector_type', ['oauth2', 'api_key', 'github', 'slack']);
+export const connectorTypeEnum = pgEnum('connector_type', [
+  'oauth2',
+  'api_key',
+  'github',
+  'slack',
+  'snowflake',
+]);
 export const connectorStatusEnum = pgEnum('connector_status', ['active', 'disabled']);
 export const secretKindEnum = pgEnum('secret_kind', [
   'oauth_client_secret',
@@ -27,6 +33,7 @@ export const secretKindEnum = pgEnum('secret_kind', [
   'webhook_secret',
   'github_app_private_key',
   'slack_signing_secret',
+  'snowflake_private_key',
 ]);
 export const installationStatusEnum = pgEnum('installation_status', [
   'pending',
@@ -172,6 +179,8 @@ export const connectors = pgTable(
     branding: jsonb('branding'),
     /** OAuthConfig from @connect/shared for oauth2/github/slack types. */
     oauthConfig: jsonb('oauth_config'),
+    /** Non-OAuth provider configuration (snowflake: SnowflakeConfig). */
+    providerConfig: jsonb('provider_config'),
     /** TokenPolicy from @connect/shared: TTL cap, scope/subject allow-lists, rate limit. */
     tokenPolicy: jsonb('token_policy'),
     /** Public OAuth client id (not secret). */

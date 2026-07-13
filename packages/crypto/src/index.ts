@@ -5,3 +5,4 @@ export * from './kms/aws.js';
 export * from './kms/gcp.js';
 export * from './kms/provider.js';
 export * from './kms/types.js';
+export * from './snowflake.js';

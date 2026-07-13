@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const environmentSchema = z.enum(['production', 'preview', 'development']);
 export type Environment = z.infer<typeof environmentSchema>;
 
-export const connectorTypeSchema = z.enum(['oauth2', 'api_key', 'github', 'slack']);
+export const connectorTypeSchema = z.enum(['oauth2', 'api_key', 'github', 'slack', 'snowflake']);
 export type ConnectorType = z.infer<typeof connectorTypeSchema>;
 
 export const roleSchema = z.enum(['owner', 'admin', 'member']);
@@ -32,6 +32,20 @@ export const oauthConfigSchema = z.object({
   quirksKey: z.string().optional(),
 });
 export type OAuthConfig = z.infer<typeof oauthConfigSchema>;
+
+/**
+ * Snowflake key-pair connectors: Connect holds the RSA private key and mints
+ * KEYPAIR_JWTs locally — a JWT exchange with no provider round-trip.
+ */
+export const snowflakeConfigSchema = z.object({
+  /** Account identifier ("xy12345" or "xy12345.us-east-1" — locator part is used). */
+  account: z.string().min(1),
+  /** Snowflake user the key pair is registered on (RSA_PUBLIC_KEY). */
+  username: z.string().min(1),
+  /** JWT lifetime in seconds (Snowflake caps at 1 hour). */
+  tokenTtlSeconds: z.number().int().min(60).max(3600).default(3600),
+});
+export type SnowflakeConfig = z.infer<typeof snowflakeConfigSchema>;
 
 /**
  * Per-connector token policy, enforced on every POST /v1/tokens:
@@ -73,6 +87,8 @@ export const createConnectorSchema = z.object({
   name: z.string().min(1).max(120),
   type: connectorTypeSchema,
   oauthConfig: oauthConfigSchema.optional(),
+  /** Non-OAuth provider configuration (snowflake: SnowflakeConfig). */
+  providerConfig: z.record(z.unknown()).optional(),
   branding: brandingSchema.optional(),
   tokenPolicy: tokenPolicySchema.optional(),
   /** Write-only secrets supplied at create time. Never returned. */
@@ -85,6 +101,7 @@ export const createConnectorSchema = z.object({
       githubAppId: z.string().optional(),
       githubAppPrivateKey: z.string().optional(),
       slackSigningSecret: z.string().optional(),
+      snowflakePrivateKey: z.string().optional(),
     })
     .optional(),
 });
