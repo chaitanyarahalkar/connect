@@ -9,6 +9,7 @@ import {
   generateKeyPair,
   type JWTPayload,
   type JSONWebKeySet,
+  type KeyLike,
 } from 'jose';
 
 /**
@@ -34,8 +35,8 @@ export async function generateSigningKey(kid: string): Promise<SigningKeyPem> {
 
 export class JwtSigner {
   private constructor(
-    private privateKey: CryptoKey,
-    private publicKey: CryptoKey,
+    private privateKey: KeyLike,
+    private publicKey: KeyLike,
     public kid: string,
   ) {}
 

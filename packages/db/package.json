@@ -5,7 +5,10 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
-    "./auth-schema": "./src/auth-schema.ts"
+    "./auth-schema": "./src/auth-schema.ts",
+    "./migrate": "./src/migrate.ts",
+    "./seed": "./src/seed.ts",
+    "./seed-secrets": "./src/seed-secrets.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
