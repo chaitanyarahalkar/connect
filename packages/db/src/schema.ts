@@ -58,6 +58,7 @@ export const deliveryStatusEnum = pgEnum('delivery_status', [
 export const usageKindEnum = pgEnum('usage_kind', ['token_request', 'webhook_delivery']);
 export const actorTypeEnum = pgEnum('actor_type', ['user', 'access_token', 'workload', 'system']);
 export const masterKeyStatusEnum = pgEnum('master_key_status', ['active', 'retired']);
+export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'final']);
 
 // ---------------------------------------------------------------------------
 // Orgs / projects / identity
@@ -378,6 +379,40 @@ export const usageEvents = pgTable(
     occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   },
   (t) => [index('usage_events_org_time_idx').on(t.orgId, t.occurredAt)],
+);
+
+/** One row per org; absent row = free plan. */
+export const orgBilling = pgTable('org_billing', {
+  orgId: text('org_id')
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  /** PlanKey from @connect/shared. */
+  planKey: text('plan_key').notNull().default('free'),
+  /** Reserved for a payment-processor integration (e.g. Stripe customer). */
+  externalCustomerId: text('external_customer_id'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+/** Generated from usage_events for one calendar month. */
+export const invoices = pgTable(
+  'invoices',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    periodStart: timestamp('period_start').notNull(),
+    /** Exclusive. */
+    periodEnd: timestamp('period_end').notNull(),
+    planKey: text('plan_key').notNull(),
+    /** InvoiceLine[] from @connect/shared. */
+    lines: jsonb('lines').notNull(),
+    totalCents: integer('total_cents').notNull(),
+    /** Draft while the period is open; final once closed. */
+    status: invoiceStatusEnum('status').notNull().default('draft'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('invoices_org_period_uq').on(t.orgId, t.periodStart)],
 );
 
 export const auditLogs = pgTable(

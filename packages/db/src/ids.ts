@@ -18,6 +18,7 @@ export const newId = {
   delivery: () => `del_${nano()}`,
   issuance: () => `iss_${nano()}`,
   usage: () => `use_${nano()}`,
+  invoice: () => `inv_${nano()}`,
   audit: () => `aud_${nano()}`,
   user: () => `usr_${nano()}`,
 };

@@ -6,6 +6,7 @@ import { type AuthEnv, authMiddleware, type SessionResolver } from './auth/middl
 import type { AppDeps } from './deps.js';
 import { errorHandler } from './errors.js';
 import { accessTokenRoutes } from './routes/access-tokens.js';
+import { billingRoutes } from './routes/billing.js';
 import { connectorRoutes } from './routes/connectors.js';
 import { linkRoutes } from './routes/links.js';
 import { oauthAuthorizeRoutes, oauthCallbackRoutes } from './routes/oauth.js';
@@ -68,6 +69,7 @@ export function buildApp(deps: AppDeps, opts: BuildAppOptions = {}) {
   v1.route('/projects', projectRoutes(deps));
   v1.route('/links', linkRoutes(deps));
   v1.route('/access-tokens', accessTokenRoutes(deps));
+  v1.route('/billing', billingRoutes(deps));
   v1.route('/', orgRoutes(deps));
   app.route('/v1', v1);
 

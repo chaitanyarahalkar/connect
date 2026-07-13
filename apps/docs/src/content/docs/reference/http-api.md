@@ -75,3 +75,14 @@ Reads require `member` role, mutations `admin`, unless noted. Workload principal
 | Route | Purpose |
 | --- | --- |
 | `GET /v1/access-tokens` · `POST /v1/access-tokens` · `DELETE /v1/access-tokens/:id` | List · create PAT (plaintext once) · revoke |
+
+### Billing
+
+Built on `usage_events`; plans (`free`/`pro`/`scale`) are defined in `@connect/shared`.
+
+| Route | Purpose |
+| --- | --- |
+| `GET /v1/billing` | Plan, plan catalog, current-period usage totals, and the projected invoice |
+| `PATCH /v1/billing/plan` | Change the org's plan (owner only, audited) |
+| `GET /v1/billing/invoices` | List generated invoices |
+| `POST /v1/billing/invoices/generate` | Generate/refresh an invoice (`{ period: "YYYY-MM" }`, default last month); open periods stay `draft` and regenerate, closed periods finalize (owner only) |

@@ -28,7 +28,7 @@ Six primitives:
 
 | Primitive | What it is |
 |---|---|
-| **Connector** | Org-owned record for one provider: `api_key`, generic `oauth2` (PKCE), or `github`/`slack` presets |
+| **Connector** | Org-owned record for one provider: `api_key`, generic `oauth2` (PKCE), `snowflake` key-pair JWT, or `github`/`slack`/`google`/`salesforce` presets |
 | **Installation** | One tenant's grant (workspace, org, or individual user) — a connector serves many |
 | **Token** | Short-lived credential minted per request; subjects: `app`, `user`, `jwt-bearer` |
 | **Project link** | Binds a connector to a project, per environment (production/preview/development) |
@@ -125,7 +125,8 @@ connect token slack-main --scopes chat:write
 
 ## Security model
 
-- **Envelope encryption at rest** — every stored secret (API keys, OAuth client secrets, refresh tokens, signing keys) gets its own AES-256-GCM data key, wrapped by a master key (`CONNECT_MASTER_KEY`, KMS-ready `KeyProvider` interface). AAD binds each ciphertext to its row, so ciphertexts can't be swapped between records. Key versions enable rotation.
+- **Envelope encryption at rest** — every stored secret (API keys, OAuth client secrets, refresh tokens, signing keys) gets its own AES-256-GCM data key, wrapped by a master key. Three `KeyProvider` backends: env master key(s), **AWS KMS**, or **GCP KMS** (`CONNECT_KEY_PROVIDER`) — KMS-wrapped KEKs are decrypted once at boot, never on the token hot path. AAD binds each ciphertext to its row, so ciphertexts can't be swapped between records. `pnpm --filter @connect/api rotate-key` mints a new key version and idempotently re-wraps every stored data key.
+- **Token policies & rate limits** — per-connector `tokenPolicy`: TTL caps, scope/subject allow-lists, and installation-scoped fixed-window rate limits (429 + `Retry-After`, honored by the SDK).
 - **No plaintext bearer secrets in the DB** — PATs and workload client secrets are stored as SHA-256 hashes; shown exactly once at creation.
 - **Workload identity** — deployments exchange client credentials for a 10-minute ES256 JWT from Connect's own issuer (JWKS at `/.well-known/jwks.json`). Token requests are authorized against project links *and* the environment baked into the JWT. Workloads cannot touch the control plane.
 - **Rotation-safe refresh** — provider refreshes run under a row lock with single-flight de-dup, so a rotating refresh token (Slack-style) can't be lost to a race. Superseded grants are kept for forensics.
@@ -144,8 +145,11 @@ Integration tests run the API in-process (`app.request`) against a real Postgres
 
 ## Roadmap
 
-- KMS `KeyProvider` (AWS/GCP) and master-key rotation job
-- Installation-scoped rate limits and per-connector token policies
-- More managed presets (Google, Salesforce, Snowflake JWT exchange)
-- Delivery replay UI + dead-letter drains
-- Billing integration on top of `usage_events`
+- [x] KMS `KeyProvider` (AWS/GCP) and master-key rotation job
+- [x] Installation-scoped rate limits and per-connector token policies
+- [x] More managed presets (Google, Salesforce, Snowflake JWT exchange)
+- [x] Delivery replay UI + dead-letter drains
+- [x] Billing integration on top of `usage_events` (plans, usage meters, invoices)
+- [ ] Payment-processor sync (Stripe) for generated invoices
+- [ ] Connector health checks + provider status probes
+- [ ] Multi-region delivery workers
