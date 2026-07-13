@@ -10,19 +10,20 @@ export function orgRoutes(deps: AppDeps) {
 
   app.get('/me', async (c) => {
     const principal = c.get('principal');
-    const [org] = await deps.db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.id, principal.orgId))
-      .limit(1);
-    if (!org) throw new ConnectError('not_found', 'organization not found');
+    const [org] = principal.orgId
+      ? await deps.db
+          .select()
+          .from(organizations)
+          .where(eq(organizations.id, principal.orgId))
+          .limit(1)
+      : [];
     return c.json({
       principal: {
         kind: principal.kind,
         actorId: principal.actorId,
         role: principal.kind === 'workload' ? null : principal.role,
       },
-      organization: { id: org.id, name: org.name, slug: org.slug },
+      organization: org ? { id: org.id, name: org.name, slug: org.slug } : null,
     });
   });
 

@@ -3,7 +3,9 @@ import { cors } from 'hono/cors';
 import type { AppDeps } from './deps.js';
 import { errorHandler } from './errors.js';
 import { IssuerService } from './auth/issuer.js';
+import { createAuth, sessionResolverFor } from './auth/better.js';
 import { authMiddleware, type AuthEnv, type SessionResolver } from './auth/middleware.js';
+import { orgManageRoutes } from './routes/orgs-manage.js';
 import { oidcRoutes } from './routes/oidc.js';
 import { oauthAuthorizeRoutes, oauthCallbackRoutes } from './routes/oauth.js';
 import { tokenRoutes } from './routes/tokens.js';
@@ -12,16 +14,20 @@ import { projectRoutes } from './routes/projects.js';
 import { linkRoutes } from './routes/links.js';
 import { accessTokenRoutes } from './routes/access-tokens.js';
 import { orgRoutes } from './routes/org.js';
+import { connectorTriggerRoutes, deliveryRoutes, triggerRoutes } from './routes/triggers.js';
+import { webhookIngestRoutes } from './webhooks/ingest.js';
 
 export interface BuildAppOptions {
-  /** Resolves better-auth dashboard sessions; wired up with the dashboard milestone. */
+  /** Overrides the default better-auth session resolver (tests). */
   sessionResolver?: SessionResolver;
-  /** Extra unauthenticated routes (better-auth handler, webhooks) mounted before auth. */
+  /** Extra unauthenticated routes (webhooks) mounted before auth. */
   publicRoutes?: (app: Hono) => void;
 }
 
 export function buildApp(deps: AppDeps, opts: BuildAppOptions = {}) {
   const issuer = new IssuerService(deps.db, deps.keyProvider, deps.config.issuer);
+  const auth = createAuth(deps);
+  const sessionResolver = opts.sessionResolver ?? sessionResolverFor(deps, auth);
   const app = new Hono();
 
   app.onError(errorHandler);
@@ -36,22 +42,28 @@ export function buildApp(deps: AppDeps, opts: BuildAppOptions = {}) {
 
   app.get('/health', (c) => c.json({ ok: true }));
 
-  // Public: OIDC discovery + client-credentials, oauth callback, caller-provided routes.
+  // Public: better-auth, OIDC discovery + client-credentials, oauth callback.
+  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw));
   app.route('/', oidcRoutes(deps, issuer));
   app.route('/', oauthCallbackRoutes(deps));
+  app.route('/', webhookIngestRoutes(deps, deps.deliveryQueue));
   opts.publicRoutes?.(app);
 
   // Everything else under /v1 requires a principal.
   const v1 = new Hono<AuthEnv>();
-  v1.use('*', authMiddleware(deps.db, issuer, opts.sessionResolver));
+  v1.use('*', authMiddleware(deps.db, issuer, sessionResolver));
+  v1.route('/orgs', orgManageRoutes(deps));
   v1.route('/tokens', tokenRoutes(deps));
   v1.route('/connectors', oauthAuthorizeRoutes(deps));
+  v1.route('/connectors', connectorTriggerRoutes(deps));
   v1.route('/connectors', connectorRoutes(deps));
+  v1.route('/triggers', triggerRoutes(deps, deps.deliveryQueue));
+  v1.route('/deliveries', deliveryRoutes(deps, deps.deliveryQueue));
   v1.route('/projects', projectRoutes(deps));
   v1.route('/links', linkRoutes(deps));
   v1.route('/access-tokens', accessTokenRoutes(deps));
   v1.route('/', orgRoutes(deps));
   app.route('/v1', v1);
 
-  return { app, issuer };
+  return { app, issuer, auth };
 }

@@ -9,8 +9,8 @@ import {
   generateKeyPair,
   type JWTPayload,
   type JSONWebKeySet,
-  type KeyLike,
 } from 'jose';
+import type { webcrypto } from 'node:crypto';
 
 /**
  * ES256 signer for Connect-issued workload identity JWTs. The private key is
@@ -35,8 +35,8 @@ export async function generateSigningKey(kid: string): Promise<SigningKeyPem> {
 
 export class JwtSigner {
   private constructor(
-    private privateKey: KeyLike,
-    private publicKey: KeyLike,
+    private privateKey: webcrypto.CryptoKey,
+    private publicKey: webcrypto.CryptoKey,
     public kid: string,
   ) {}
 

@@ -13,6 +13,11 @@
     "db:seed": "pnpm --filter @connect/db seed",
     "demo": "tsx scripts/demo.ts"
   },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.10.1"
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "tsx": "^4.19.0",
