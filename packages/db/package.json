@@ -1,0 +1,29 @@
+{
+  "name": "@connect/db",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./auth-schema": "./src/auth-schema.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@connect/crypto": "workspace:*",
+    "@connect/shared": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "nanoid": "^5.0.9",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
