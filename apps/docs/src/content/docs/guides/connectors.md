@@ -1,0 +1,82 @@
+---
+title: Setting up connectors
+description: api_key, generic OAuth2 (PKCE), GitHub, and Slack connectors — config shapes, presets, and provider quirks.
+sidebar:
+  order: 3
+---
+
+A **connector** is an org-owned record for one provider. Four types are supported: `api_key`, generic `oauth2`, and the `github`/`slack` presets (which ride the generic OAuth engine with provider-specific quirks). Create connectors in the dashboard wizard, via `connect connectors create`, or with `POST /v1/connectors`.
+
+## Configuration shape
+
+```jsonc
+{
+  "slug": "slack-main",          // 2–64 chars, ^[a-z0-9][a-z0-9-]*[a-z0-9]$
+  "name": "Slack (main)",
+  "type": "slack",               // oauth2 | api_key | github | slack
+  "oauthConfig": {
+    "authorizationEndpoint": "https://slack.com/oauth/v2/authorize",
+    "tokenEndpoint": "https://slack.com/api/oauth.v2.access",
+    "revocationEndpoint": "https://slack.com/api/auth.revoke",   // optional
+    "userinfoEndpoint": "…",     // optional, used to label installations
+    "issuer": "…",               // optional, enables OIDC discovery
+    "scopesDefault": ["chat:write"],
+    "pkce": false,               // default true
+    "tokenEndpointAuth": "post", // 'basic' | 'post' (default 'post')
+    "quirksKey": "slack"
+  },
+  "branding": { "iconUrl": "…", "color": "#611f69" },
+  "secrets": {                   // write-only — never readable back
+    "oauthClientId": "…",
+    "oauthClientSecret": "…",
+    "apiKey": "…",
+    "webhookSecret": "…",
+    "githubAppId": "…",
+    "githubAppPrivateKey": "…",
+    "slackSigningSecret": "…"
+  }
+}
+```
+
+OAuth-based types require `oauthConfig`. All secrets are envelope-encrypted at rest and can only be rotated (`PUT /v1/connectors/:id/secrets`), never read.
+
+For custom OAuth2 providers that support OIDC discovery, `POST /v1/connectors/discover` (or the wizard's "Discover from issuer URL") fills the endpoints from `/.well-known/openid-configuration`.
+
+## api_key connectors
+
+The simplest type: store a provider API key once; `getToken` returns it as a short-lived credential for `app` subjects only. Token lifetime is the policy TTL (`API_KEY_TOKEN_TTL`, default 900s) — the underlying key never leaves Connect with a longer validity than that window.
+
+## Generic oauth2 connectors
+
+Full authorization-code flow with PKCE (S256) by default. Refresh tokens are stored envelope-encrypted; refreshes run under a row lock with single-flight de-duplication so rotating refresh tokens can't be lost to a race. Superseded grants are retained for forensics.
+
+## GitHub preset
+
+Prefills from `packages/connectors/src/presets.ts`:
+
+- Authorize: `https://github.com/login/oauth/authorize`, token: `https://github.com/login/oauth/access_token`
+- Default scopes `repo`, `read:user`; `tokenEndpointAuth: 'post'`; PKCE off (GitHub OAuth apps)
+- Quirks: refresh tokens rotate; non-expiring tokens get a 900s policy TTL; installations are labeled via `https://api.github.com/user`
+
+**GitHub App mode:** if you set `githubAppId` and `githubAppPrivateKey` in secrets, `app`-subject token requests mint **installation access tokens**: Connect signs a short-lived RS256 app JWT and calls `POST /app/installations/{id}/access_tokens`, narrowing by `repositories`/`permissions` passed via `authorizationDetails`. User-subject requests still use the OAuth flow.
+
+## Slack preset
+
+- Authorize: `https://slack.com/oauth/v2/authorize`, token: `https://slack.com/api/oauth.v2.access`, revocation: `https://slack.com/api/auth.revoke`
+- Default scope `chat:write`; `tokenEndpointAuth: 'post'`; PKCE off
+- Quirks: scopes are passed comma-joined; Slack's HTTP-200-`ok:false` errors are handled; user tokens nested under `authed_user` are parsed; refresh rotation is on; installations are labeled by workspace (`team.id`/`team.name`)
+- Set `slackSigningSecret` to enable inbound webhook verification (see [Triggers & webhooks](/connect/guides/triggers/))
+
+## Installations
+
+One connector serves many tenants. An **installation** is one tenant's grant — created by the OAuth callback (matched on subject user or external account id), or registered manually for GitHub Apps. Token requests resolve an installation automatically: an explicit `installationId` wins; `user` subjects use that user's active installation; otherwise a single active installation is used, and multiple candidates raise `installation_ambiguous`.
+
+## Linking to projects
+
+Workloads can only mint tokens for connectors **linked to their project and environment** (`production`/`preview`/`development`):
+
+```bash
+connect link demo-app slack-main --env production,preview
+```
+
+Dashboard users and PATs skip link enforcement; workload identities do not.
