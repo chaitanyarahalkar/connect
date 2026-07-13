@@ -50,6 +50,7 @@ export const deliveryStatusEnum = pgEnum('delivery_status', [
 ]);
 export const usageKindEnum = pgEnum('usage_kind', ['token_request', 'webhook_delivery']);
 export const actorTypeEnum = pgEnum('actor_type', ['user', 'access_token', 'workload', 'system']);
+export const masterKeyStatusEnum = pgEnum('master_key_status', ['active', 'retired']);
 
 // ---------------------------------------------------------------------------
 // Orgs / projects / identity
@@ -124,6 +125,25 @@ export const accessTokens = pgTable(
   },
   (t) => [index('access_tokens_prefix_idx').on(t.tokenPrefix)],
 );
+
+/**
+ * KMS-wrapped master key (KEK) versions for envelope encryption. Only used
+ * when CONNECT_KEY_PROVIDER is aws-kms/gcp-kms; the env provider keeps its
+ * KEKs in env vars. Retired versions stay decryptable until every stored DEK
+ * has been re-wrapped by the rotation job.
+ */
+export const masterKeys = pgTable('master_keys', {
+  /** Monotonic version label ('v1', 'v2', …) recorded on every EncryptedBlob. */
+  version: text('version').primaryKey(),
+  provider: text('provider').notNull(),
+  /** Remote KMS key (ARN / resource name) that wraps this KEK. */
+  kmsKeyId: text('kms_key_id').notNull(),
+  /** base64 KMS ciphertext of the 32-byte KEK. */
+  wrappedKek: text('wrapped_kek').notNull(),
+  status: masterKeyStatusEnum('status').notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  retiredAt: timestamp('retired_at'),
+});
 
 /** ES256 signing keys for the OIDC issuer; private key is envelope-encrypted. */
 export const signingKeys = pgTable('signing_keys', {
