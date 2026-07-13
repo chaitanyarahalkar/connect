@@ -140,3 +140,24 @@ export interface Delivery {
   createdAt: string;
   eventType: string | null;
 }
+
+export interface DeliveryDetail {
+  id: string;
+  status: DeliveryStatus;
+  attempts: number;
+  responseStatus: number | null;
+  lastError: string | null;
+  nextRetryAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  trigger: { id: string; name: string };
+  destinationUrl: string;
+  event: {
+    id: string;
+    type: string | null;
+    signatureValid: boolean;
+    receivedAt: string;
+    payload: unknown;
+    headers: Record<string, string>;
+  };
+}

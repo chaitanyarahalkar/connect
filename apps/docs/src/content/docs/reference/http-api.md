@@ -57,7 +57,9 @@ Reads require `member` role, mutations `admin`, unless noted. Workload principal
 | --- | --- |
 | `GET /v1/connectors/:id/triggers` · `POST /v1/connectors/:id/triggers` | List · create (returns `whsec_` secret once) |
 | `PATCH /v1/triggers/:id` · `DELETE /v1/triggers/:id` | Toggle/rename · delete |
-| `GET /v1/triggers/:id/deliveries` | Delivery history with per-attempt status |
+| `GET /v1/triggers/:id/deliveries` | Delivery history with per-attempt status (`?status=dead,failed&limit=200`) |
+| `POST /v1/triggers/:id/drain` | Dead-letter drain: re-queue every `dead` delivery, returns `{ drained }` |
+| `GET /v1/deliveries/:id` | Full delivery detail incl. event payload, headers, and destination |
 | `POST /v1/deliveries/:id/redeliver` | Reset and re-enqueue a delivery |
 
 ### Projects & links

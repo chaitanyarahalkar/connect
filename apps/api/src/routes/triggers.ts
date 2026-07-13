@@ -3,7 +3,7 @@ import { connectors, newId, triggers, webhookDeliveries, webhookEvents } from '@
 import { ConnectError } from '@connect/shared';
 import { zValidator } from '@hono/zod-validator';
 import type { Queue } from 'bullmq';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { writeAudit } from '../audit.js';
@@ -133,6 +133,11 @@ export function triggerRoutes(deps: AppDeps, _queue: Queue<DeliveryJob>) {
     const principal = c.get('principal');
     requireRole(principal, 'member');
     const trigger = await findTrigger(deps, principal.orgId, c.req.param('id'));
+    const statusParam = c.req.query('status');
+    const statuses = statusParam
+      ? deliveryStatusListSchema.parse(statusParam.split(','))
+      : undefined;
+    const limit = Math.min(Number(c.req.query('limit') ?? 100) || 100, 200);
     const rows = await deps.db
       .select({
         id: webhookDeliveries.id,
@@ -146,10 +151,59 @@ export function triggerRoutes(deps: AppDeps, _queue: Queue<DeliveryJob>) {
       })
       .from(webhookDeliveries)
       .innerJoin(webhookEvents, eq(webhookEvents.id, webhookDeliveries.webhookEventId))
-      .where(eq(webhookDeliveries.triggerId, trigger.id))
+      .where(
+        and(
+          eq(webhookDeliveries.triggerId, trigger.id),
+          statuses ? inArray(webhookDeliveries.status, statuses) : undefined,
+        ),
+      )
       .orderBy(desc(webhookDeliveries.createdAt))
-      .limit(100);
+      .limit(limit);
     return c.json({ deliveries: rows });
+  });
+
+  return app;
+}
+
+const deliveryStatusListSchema = z
+  .array(z.enum(['pending', 'delivering', 'succeeded', 'failed', 'dead']))
+  .min(1);
+
+/**
+ * Dead-letter drain: re-queues every `dead` delivery for a trigger in one
+ * shot. Failed-but-retrying deliveries are excluded — BullMQ still owns those.
+ */
+export function triggerDrainRoutes(deps: AppDeps, queue: Queue<DeliveryJob>) {
+  const app = new Hono<AuthEnv>();
+
+  app.post('/:id/drain', async (c) => {
+    const principal = c.get('principal');
+    requireRole(principal, 'admin');
+    const trigger = await findTrigger(deps, principal.orgId, c.req.param('id'));
+
+    const drained = await deps.db
+      .update(webhookDeliveries)
+      .set({ status: 'pending', attempts: 0, lastError: null, nextRetryAt: null })
+      .where(and(eq(webhookDeliveries.triggerId, trigger.id), eq(webhookDeliveries.status, 'dead')))
+      .returning({ id: webhookDeliveries.id });
+
+    if (drained.length > 0) {
+      await queue.addBulk(
+        drained.map((d) => ({
+          name: 'deliver',
+          data: { deliveryId: d.id },
+          opts: DELIVERY_JOB_OPTIONS,
+        })),
+      );
+    }
+    await writeAudit(deps.db, principal, {
+      orgId: principal.orgId,
+      action: 'trigger.drain',
+      targetType: 'trigger',
+      targetId: trigger.id,
+      metadata: { drained: drained.length },
+    });
+    return c.json({ drained: drained.length });
   });
 
   return app;
@@ -157,6 +211,50 @@ export function triggerRoutes(deps: AppDeps, _queue: Queue<DeliveryJob>) {
 
 export function deliveryRoutes(deps: AppDeps, queue: Queue<DeliveryJob>) {
   const app = new Hono<AuthEnv>();
+
+  app.get('/:id', async (c) => {
+    const principal = c.get('principal');
+    requireRole(principal, 'member');
+    const [row] = await deps.db
+      .select({
+        delivery: webhookDeliveries,
+        event: webhookEvents,
+        triggerName: triggers.name,
+        destinationUrl: triggers.destinationUrl,
+        orgId: connectors.orgId,
+      })
+      .from(webhookDeliveries)
+      .innerJoin(webhookEvents, eq(webhookEvents.id, webhookDeliveries.webhookEventId))
+      .innerJoin(triggers, eq(triggers.id, webhookDeliveries.triggerId))
+      .innerJoin(connectors, eq(connectors.id, triggers.connectorId))
+      .where(eq(webhookDeliveries.id, c.req.param('id')))
+      .limit(1);
+    if (!row || row.orgId !== principal.orgId) {
+      throw new ConnectError('not_found', 'delivery not found');
+    }
+    return c.json({
+      delivery: {
+        id: row.delivery.id,
+        status: row.delivery.status,
+        attempts: row.delivery.attempts,
+        responseStatus: row.delivery.responseStatus,
+        lastError: row.delivery.lastError,
+        nextRetryAt: row.delivery.nextRetryAt,
+        deliveredAt: row.delivery.deliveredAt,
+        createdAt: row.delivery.createdAt,
+        trigger: { id: row.delivery.triggerId, name: row.triggerName },
+        destinationUrl: row.destinationUrl,
+        event: {
+          id: row.event.id,
+          type: row.event.providerEventType,
+          signatureValid: row.event.signatureValid,
+          receivedAt: row.event.receivedAt,
+          payload: row.event.payload,
+          headers: row.event.headers,
+        },
+      },
+    });
+  });
 
   app.post('/:id/redeliver', async (c) => {
     const principal = c.get('principal');
