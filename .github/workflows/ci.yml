@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: connect
+          POSTGRES_PASSWORD: connect
+          POSTGRES_DB: connect
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U connect
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+
+    env:
+      TEST_DATABASE_URL: postgres://connect:connect@localhost:5432/connect_test
+      TEST_REDIS_URL: redis://localhost:6379/1
+      CONNECT_MASTER_KEY: ci-only-master-key-not-for-production
+      CONNECT_API_URL: http://localhost:4000
+      NEXT_PUBLIC_CONNECT_API_URL: http://localhost:4000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create test database
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql postgres://connect:connect@localhost:5432/connect -tc "SELECT 1 FROM pg_database WHERE datname = 'connect_test'" | grep -q 1 || \
+            psql postgres://connect:connect@localhost:5432/connect -c 'CREATE DATABASE connect_test OWNER connect;'
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

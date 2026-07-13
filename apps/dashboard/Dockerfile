@@ -11,12 +11,13 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY apps/dashboard ./apps/dashboard/
 COPY packages/shared ./packages/shared/
+# Railway injects service variables at build time (including reference vars).
 ARG CONNECT_API_URL=http://localhost:4000
 ARG NEXT_PUBLIC_CONNECT_API_URL=http://localhost:4000
 ARG NEXT_PUBLIC_USE_API_PROXY=false
-ENV CONNECT_API_URL=$CONNECT_API_URL
-ENV NEXT_PUBLIC_CONNECT_API_URL=$NEXT_PUBLIC_CONNECT_API_URL
-ENV NEXT_PUBLIC_USE_API_PROXY=$NEXT_PUBLIC_USE_API_PROXY
+ENV CONNECT_API_URL=${CONNECT_API_URL}
+ENV NEXT_PUBLIC_CONNECT_API_URL=${NEXT_PUBLIC_CONNECT_API_URL}
+ENV NEXT_PUBLIC_USE_API_PROXY=${NEXT_PUBLIC_USE_API_PROXY}
 RUN pnpm --filter @connect/dashboard build
 
 FROM base AS runner
