@@ -228,6 +228,45 @@ export function connectorRoutes(deps: AppDeps) {
     });
   });
 
+  /** Manual registration, e.g. a GitHub App installation id from the provider's UI. */
+  app.post(
+    '/:id/installations',
+    zValidator(
+      'json',
+      z.object({
+        externalAccountId: z.string().min(1),
+        externalAccountName: z.string().optional(),
+        subjectUserId: z.string().optional(),
+        metadata: z.record(z.unknown()).optional(),
+      }),
+    ),
+    async (c) => {
+      const principal = c.get('principal');
+      requireRole(principal, 'admin');
+      const row = await findConnector(deps, principal.orgId, c.req.param('id'));
+      const input = c.req.valid('json');
+      const id = newId.installation();
+      await deps.db.insert(installations).values({
+        id,
+        connectorId: row.id,
+        status: 'active',
+        externalAccountId: input.externalAccountId,
+        externalAccountName: input.externalAccountName,
+        subjectUserId: input.subjectUserId,
+        installedByUserId: principal.kind === 'user' ? principal.actorId : null,
+        metadata: input.metadata,
+      });
+      await writeAudit(deps.db, principal, {
+        orgId: principal.orgId,
+        action: 'installation.register',
+        targetType: 'installation',
+        targetId: id,
+        metadata: { externalAccountId: input.externalAccountId },
+      });
+      return c.json({ installation: { id, status: 'active' } }, 201);
+    },
+  );
+
   app.post('/:id/installations/:installationId/revoke', async (c) => {
     const principal = c.get('principal');
     requireRole(principal, 'admin');

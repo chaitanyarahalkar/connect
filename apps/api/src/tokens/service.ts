@@ -8,16 +8,15 @@ import { TokenCache, cacheKey, type CachedToken } from './cache.js';
 import { singleFlight } from './lock.js';
 import { mintApiKeyToken, type ConnectorRow, type InstallationRow, type Minter } from './minters.js';
 import { mintOAuth2Token } from './oauth2-minter.js';
+import { mintGithubToken } from './github-minter.js';
 
-const minters: Partial<Record<ConnectorRow['type'], Minter>> = {
+const minters: Record<ConnectorRow['type'], Minter> = {
   api_key: mintApiKeyToken,
   oauth2: mintOAuth2Token,
+  github: mintGithubToken,
+  // Slack minting is plain OAuth refresh; the slack-ness lives in quirks.
+  slack: mintOAuth2Token,
 };
-
-/** Later milestones plug in github/slack minters here. */
-export function registerMinter(type: ConnectorRow['type'], minter: Minter): void {
-  minters[type] = minter;
-}
 
 export async function requestToken(
   deps: AppDeps,
