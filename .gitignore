@@ -7,3 +7,5 @@ dist/
 .env.local
 .env.*.local
 coverage/
+.astro/
+apps/docs/src/content/docs/api/
