@@ -1,16 +1,16 @@
+import type { webcrypto } from 'node:crypto';
 import {
-  SignJWT,
-  jwtVerify,
-  importPKCS8,
-  importSPKI,
   exportJWK,
   exportPKCS8,
   exportSPKI,
   generateKeyPair,
-  type JWTPayload,
+  importPKCS8,
+  importSPKI,
   type JSONWebKeySet,
+  type JWTPayload,
+  jwtVerify,
+  SignJWT,
 } from 'jose';
-import type { webcrypto } from 'node:crypto';
 
 /**
  * ES256 signer for Connect-issued workload identity JWTs. The private key is
@@ -48,7 +48,10 @@ export class JwtSigner {
     );
   }
 
-  async sign(payload: JWTPayload, opts: { issuer: string; audience: string; ttlSeconds: number }): Promise<string> {
+  async sign(
+    payload: JWTPayload,
+    opts: { issuer: string; audience: string; ttlSeconds: number },
+  ): Promise<string> {
     return new SignJWT(payload)
       .setProtectedHeader({ alg: 'ES256', kid: this.kid })
       .setIssuer(opts.issuer)

@@ -1,10 +1,10 @@
 'use client';
 
+import { CopyField } from '@/components/copy-button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PUBLIC_API_URL } from '@/lib/api';
 import type { Connector } from '@/lib/types';
 import { formatDateTime } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CopyField } from '@/components/copy-button';
 
 export function ConnectorOverviewTab({ connector }: { connector: Connector }) {
   const callbackUrl = `${PUBLIC_API_URL}/v1/oauth/callback`;
@@ -46,11 +46,7 @@ export function ConnectorOverviewTab({ connector }: { connector: Connector }) {
             <Row label="OAuth client ID" value={connector.clientId ?? '(not set)'} mono />
             {cfg ? (
               <>
-                <Row
-                  label="Authorization endpoint"
-                  value={cfg.authorizationEndpoint ?? '—'}
-                  mono
-                />
+                <Row label="Authorization endpoint" value={cfg.authorizationEndpoint ?? '—'} mono />
                 <Row label="Token endpoint" value={cfg.tokenEndpoint ?? '—'} mono />
                 <Row
                   label="Default scopes"
@@ -74,7 +70,9 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   return (
     <div className="flex gap-4">
       <dt className="w-44 shrink-0 text-zinc-500">{label}</dt>
-      <dd className={`min-w-0 break-all text-zinc-900 ${mono ? 'font-mono text-xs leading-5' : ''}`}>
+      <dd
+        className={`min-w-0 break-all text-zinc-900 ${mono ? 'font-mono text-xs leading-5' : ''}`}
+      >
         {value}
       </dd>
     </div>

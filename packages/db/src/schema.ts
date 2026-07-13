@@ -28,7 +28,11 @@ export const secretKindEnum = pgEnum('secret_kind', [
   'github_app_private_key',
   'slack_signing_secret',
 ]);
-export const installationStatusEnum = pgEnum('installation_status', ['pending', 'active', 'revoked']);
+export const installationStatusEnum = pgEnum('installation_status', [
+  'pending',
+  'active',
+  'revoked',
+]);
 export const grantTypeEnum = pgEnum('grant_type', [
   'refresh_token',
   'access_token',
@@ -89,20 +93,17 @@ export const projects = pgTable(
 );
 
 /** Workload identity: client-credentials pair a deployment uses to mint OIDC JWTs. */
-export const projectClients = pgTable(
-  'project_clients',
-  {
-    id: text('id').primaryKey(),
-    projectId: text('project_id')
-      .notNull()
-      .references(() => projects.id, { onDelete: 'cascade' }),
-    clientId: text('client_id').notNull().unique(),
-    clientSecretHash: text('client_secret_hash').notNull(),
-    environment: environmentEnum('environment').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    revokedAt: timestamp('revoked_at'),
-  },
-);
+export const projectClients = pgTable('project_clients', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().unique(),
+  clientSecretHash: text('client_secret_hash').notNull(),
+  environment: environmentEnum('environment').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  revokedAt: timestamp('revoked_at'),
+});
 
 export const accessTokens = pgTable(
   'access_tokens',

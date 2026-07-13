@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { OAuthConfig } from '@connect/shared';
 import { ProviderTokenError } from '@connect/connectors';
+import type { OAuthConfig } from '@connect/shared';
+import { describe, expect, it } from 'vitest';
 import { buildAuthorizationUrl, exchangeCode, refreshGrant } from '../src/oauth/engine.js';
 import { codeChallengeS256, generateCodeVerifier } from '../src/oauth/pkce.js';
 
@@ -15,7 +15,9 @@ const cfg = (over: Partial<OAuthConfig> = {}): OAuthConfig => ({
 
 const client = { clientId: 'cid', clientSecret: 'csec' };
 
-function fakeFetch(handler: (url: string, init: RequestInit) => { status?: number; body: unknown }) {
+function fakeFetch(
+  handler: (url: string, init: RequestInit) => { status?: number; body: unknown },
+) {
   const calls: { url: string; init: RequestInit }[] = [];
   const impl = (async (url: unknown, init?: unknown) => {
     calls.push({ url: String(url), init: (init ?? {}) as RequestInit });
@@ -104,14 +106,24 @@ describe('provider quirks in responses', () => {
         authed_user: { access_token: 'xoxp-user', expires_in: 3600, scope: 'chat:write' },
       },
     }));
-    const set = await exchangeCode(cfg({ quirksKey: 'slack' }), client, { code: 'x', redirectUri: 'r' }, impl);
+    const set = await exchangeCode(
+      cfg({ quirksKey: 'slack' }),
+      client,
+      { code: 'x', redirectUri: 'r' },
+      impl,
+    );
     expect(set.accessToken).toBe('xoxp-user');
     expect(set.expiresIn).toBe(3600);
   });
 
   it('applies the github default expiry when expires_in is missing', async () => {
     const { impl } = fakeFetch(() => ({ body: { access_token: 'gho_abc', scope: 'repo' } }));
-    const set = await refreshGrant(cfg({ quirksKey: 'github' }), client, { refreshToken: 'rt' }, impl);
+    const set = await refreshGrant(
+      cfg({ quirksKey: 'github' }),
+      client,
+      { refreshToken: 'rt' },
+      impl,
+    );
     expect(set.expiresIn).toBe(900);
   });
 

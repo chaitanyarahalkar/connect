@@ -1,7 +1,7 @@
-import { Redis } from 'ioredis';
-import type { Queue } from 'bullmq';
-import { createDb, type Db } from '@connect/db';
 import { EnvKeyProvider, type KeyProvider } from '@connect/crypto';
+import { createDb, type Db } from '@connect/db';
+import type { Queue } from 'bullmq';
+import { Redis } from 'ioredis';
 import type { ApiConfig } from './config.js';
 import { createDeliveryQueue, type DeliveryJob } from './webhooks/queue.js';
 
@@ -24,8 +24,7 @@ export function createDeps(config: ApiConfig, overrides: Partial<AppDeps> = {}):
     config,
     db: overrides.db ?? db,
     redis,
-    keyProvider:
-      overrides.keyProvider ?? new EnvKeyProvider({ v1: config.masterKey }, 'v1'),
+    keyProvider: overrides.keyProvider ?? new EnvKeyProvider({ v1: config.masterKey }, 'v1'),
     providerFetch: overrides.providerFetch ?? fetch,
     deliveryQueue,
     close: async () => {

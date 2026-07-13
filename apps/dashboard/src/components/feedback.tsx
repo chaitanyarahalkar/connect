@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import type { ApiError } from '@/lib/api';
 
 export function Spinner({ label }: { label?: string }) {
   return (

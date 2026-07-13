@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { type ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 type Variant = 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary';
@@ -29,7 +29,15 @@ const sizeClasses: Record<Size, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = 'default', size = 'default', loading = false, disabled, children, ...props },
+  {
+    className,
+    variant = 'default',
+    size = 'default',
+    loading = false,
+    disabled,
+    children,
+    ...props
+  },
   ref,
 ) {
   return (

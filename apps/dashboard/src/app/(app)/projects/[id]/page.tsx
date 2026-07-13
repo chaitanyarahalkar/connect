@@ -1,23 +1,17 @@
 'use client';
 
-import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useApi } from '@/lib/use-api';
-import { apiFetch, PUBLIC_API_URL } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
-import type {
-  Connector,
-  CreatedProjectClient,
-  Environment,
-  Project,
-  ProjectClient,
-  ProjectLink,
-} from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { use, useMemo, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { CopyButton } from '@/components/copy-button';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -26,11 +20,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { CopyButton } from '@/components/copy-button';
-import { useToast } from '@/components/toast';
+import { apiFetch, PUBLIC_API_URL } from '@/lib/api';
+import type {
+  Connector,
+  CreatedProjectClient,
+  Environment,
+  Project,
+  ProjectClient,
+  ProjectLink,
+} from '@/lib/types';
+import { useApi } from '@/lib/use-api';
+import { formatDate } from '@/lib/utils';
 
 const ENVIRONMENTS: Environment[] = ['production', 'preview', 'development'];
 

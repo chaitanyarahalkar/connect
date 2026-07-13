@@ -1,15 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { and, eq, isNull } from 'drizzle-orm';
 import { installationGrants } from '@connect/db';
 import { buildMockProvider } from '@connect/mock-provider';
+import { and, eq, isNull } from 'drizzle-orm';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   authed,
   createHarness,
   ensureMigrated,
   json,
   resetState,
-  seedOrg,
   type SeededOrg,
+  seedOrg,
   type TestHarness,
 } from './helpers.js';
 
@@ -92,7 +92,10 @@ describe('authorization-code + PKCE flow', () => {
     const dest = await completeAuthorization(org.pat, connectorId);
     expect(dest).toContain('installed=');
 
-    const list = await h.app.request(`/v1/connectors/${connectorId}/installations`, authed(org.pat));
+    const list = await h.app.request(
+      `/v1/connectors/${connectorId}/installations`,
+      authed(org.pat),
+    );
     const { installations } = await json(list);
     expect(installations).toHaveLength(1);
     expect(installations[0].status).toBe('active');
@@ -101,7 +104,10 @@ describe('authorization-code + PKCE flow', () => {
   });
 
   it('rejects a replayed state (single-use)', async () => {
-    const authorize = await h.app.request(`/v1/connectors/${connectorId}/authorize`, authed(org.pat, {}));
+    const authorize = await h.app.request(
+      `/v1/connectors/${connectorId}/authorize`,
+      authed(org.pat, {}),
+    );
     const { url } = await json(authorize);
     const consent = await mock.app.request(`${url.slice(MOCK_URL.length)}&auto=1`);
     const redirect = new URL(consent.headers.get('location')!);
@@ -139,9 +145,11 @@ describe('authorization-code + PKCE flow', () => {
     expect(res.status).toBe(200);
     expect(mock.state.stats.refreshes).toBe(refreshesBefore + 1);
 
-    const [inst] = (await json(
-      await h.app.request(`/v1/connectors/${connectorId}/installations`, authed(org.pat)),
-    )).installations;
+    const [inst] = (
+      await json(
+        await h.app.request(`/v1/connectors/${connectorId}/installations`, authed(org.pat)),
+      )
+    ).installations;
     const current = await h.deps.db
       .select()
       .from(installationGrants)
@@ -173,9 +181,11 @@ describe('authorization-code + PKCE flow', () => {
     expect(mock.state.stats.refreshes).toBe(refreshesBefore + 6);
 
     // after six rotations under concurrency, still exactly one live grant
-    const [inst] = (await json(
-      await h.app.request(`/v1/connectors/${connectorId}/installations`, authed(org.pat)),
-    )).installations;
+    const [inst] = (
+      await json(
+        await h.app.request(`/v1/connectors/${connectorId}/installations`, authed(org.pat)),
+      )
+    ).installations;
     const current = await h.deps.db
       .select()
       .from(installationGrants)

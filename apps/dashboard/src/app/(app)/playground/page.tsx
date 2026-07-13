@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useApi } from '@/lib/use-api';
-import { apiFetch } from '@/lib/api';
-import type { Connector, Installation, TokenResponse } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { CopyButton } from '@/components/copy-button';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { SecretReveal } from '@/components/secret-reveal';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { SecretReveal } from '@/components/secret-reveal';
-import { CopyButton } from '@/components/copy-button';
+import { apiFetch } from '@/lib/api';
+import type { Connector, Installation, TokenResponse } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
 
 function useCountdown(expiresAt: string | null): string {
   const [now, setNow] = useState(() => Date.now());
@@ -79,7 +79,8 @@ export default function PlaygroundPage() {
         body: {
           connector: selectedConnector.slug,
           ...(installationId ? { installationId } : {}),
-          subject: subjectType === 'app' ? { type: 'app' } : { type: 'user', userId: userId.trim() },
+          subject:
+            subjectType === 'app' ? { type: 'app' } : { type: 'user', userId: userId.trim() },
           ...(scopeList.length > 0 ? { scopes: scopeList } : {}),
         },
       });
@@ -212,7 +213,11 @@ export default function PlaygroundPage() {
                 {result ? (
                   <CardDescription className="flex items-center gap-2">
                     <span>{countdown}</span>
-                    {result.cached ? <Badge variant="warning">cached</Badge> : <Badge variant="success">fresh</Badge>}
+                    {result.cached ? (
+                      <Badge variant="warning">cached</Badge>
+                    ) : (
+                      <Badge variant="success">fresh</Badge>
+                    )}
                   </CardDescription>
                 ) : null}
               </CardHeader>
@@ -227,8 +232,15 @@ export default function PlaygroundPage() {
                         value={result.scopes.length > 0 ? result.scopes.join(', ') : '(none)'}
                       />
                       <ResultRow label="Connector" value={result.connectorId} mono />
-                      <ResultRow label="Installation" value={result.installationId ?? '(default)'} mono />
-                      <ResultRow label="Expires" value={new Date(result.expiresAt).toLocaleString()} />
+                      <ResultRow
+                        label="Installation"
+                        value={result.installationId ?? '(default)'}
+                        mono
+                      />
+                      <ResultRow
+                        label="Expires"
+                        value={new Date(result.expiresAt).toLocaleString()}
+                      />
                     </dl>
                   </div>
                 ) : (
@@ -261,7 +273,9 @@ function ResultRow({ label, value, mono }: { label: string; value: string; mono?
   return (
     <div className="flex gap-3">
       <dt className="w-28 shrink-0 text-zinc-500">{label}</dt>
-      <dd className={`min-w-0 break-all text-zinc-900 ${mono ? 'font-mono text-xs leading-5' : ''}`}>
+      <dd
+        className={`min-w-0 break-all text-zinc-900 ${mono ? 'font-mono text-xs leading-5' : ''}`}
+      >
         {value}
       </dd>
     </div>

@@ -1,12 +1,17 @@
-import { and, eq, isNull } from 'drizzle-orm';
-import { installationGrants, installations, newId } from '@connect/db';
-import { decryptSecret, encryptSecret, secretAad, type EncryptedBlob } from '@connect/crypto';
-import { ConnectError, type OAuthConfig } from '@connect/shared';
 import { ProviderTokenError, quirksFor, type TokenSet } from '@connect/connectors';
-import { exchangeJwtBearer, refreshGrant, type OAuthClient } from '../oauth/engine.js';
+import { decryptSecret, type EncryptedBlob, encryptSecret, secretAad } from '@connect/crypto';
+import { installationGrants, installations, newId } from '@connect/db';
+import { ConnectError, type OAuthConfig } from '@connect/shared';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { AppDeps } from '../deps.js';
-import { readConnectorSecret, type ConnectorRow, type MintContext, type Minter } from './minters.js';
+import { exchangeJwtBearer, type OAuthClient, refreshGrant } from '../oauth/engine.js';
 import type { CachedToken } from './cache.js';
+import {
+  type ConnectorRow,
+  type MintContext,
+  type Minter,
+  readConnectorSecret,
+} from './minters.js';
 
 const FALLBACK_EXPIRY_SECONDS = 3600;
 
@@ -79,7 +84,10 @@ async function refreshWithRotation(
         refreshGrant(cfg, client, { refreshToken, scopes: ctx.scopes }, deps.providerFetch),
       );
 
-      if (tokenSet.refreshToken && (quirks.refreshRotates || tokenSet.refreshToken !== refreshToken)) {
+      if (
+        tokenSet.refreshToken &&
+        (quirks.refreshRotates || tokenSet.refreshToken !== refreshToken)
+      ) {
         const id = newId.grant();
         await tx.insert(installationGrants).values({
           id,
@@ -161,9 +169,13 @@ async function runProviderCall(ctx: MintContext, call: () => Promise<TokenSet>):
           .update(installations)
           .set({ status: 'pending' })
           .where(eq(installations.id, ctx.installation.id));
-        throw new ConnectError('grant_expired', 'provider rejected the stored grant; re-authorize', {
-          providerError: err.code,
-        });
+        throw new ConnectError(
+          'grant_expired',
+          'provider rejected the stored grant; re-authorize',
+          {
+            providerError: err.code,
+          },
+        );
       }
       throw new ConnectError('provider_error', `provider token request failed: ${err.message}`, {
         providerError: err.code,

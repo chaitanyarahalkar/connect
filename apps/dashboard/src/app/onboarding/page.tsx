@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/auth-client';
-import { apiFetch, storeOrgSlug } from '@/lib/api';
-import { slugify } from '@/lib/utils';
-import type { Org } from '@/lib/types';
+import { type FormEvent, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { apiFetch, storeOrgSlug } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
+import type { Org } from '@/lib/types';
+import { slugify } from '@/lib/utils';
 
 export default function OnboardingPage() {
   const router = useRouter();

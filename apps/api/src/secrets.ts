@@ -1,6 +1,6 @@
+import { encryptSecret, type KeyProvider, secretAad } from '@connect/crypto';
+import { connectorSecrets, type Db, newId } from '@connect/db';
 import { and, eq } from 'drizzle-orm';
-import { connectorSecrets, newId, type Db } from '@connect/db';
-import { encryptSecret, secretAad, type KeyProvider } from '@connect/crypto';
 
 type SecretKind = (typeof connectorSecrets.$inferSelect)['kind'];
 

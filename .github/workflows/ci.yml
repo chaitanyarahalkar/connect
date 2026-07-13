@@ -67,6 +67,9 @@ jobs:
           psql postgres://connect:connect@localhost:5432/connect -tc "SELECT 1 FROM pg_database WHERE datname = 'connect_test'" | grep -q 1 || \
             psql postgres://connect:connect@localhost:5432/connect -c 'CREATE DATABASE connect_test OWNER connect;'
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 

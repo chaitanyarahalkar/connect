@@ -25,6 +25,7 @@ export function Tabs({
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             role="tab"
             aria-selected={active === tab.id}
             onClick={() => onChange(tab.id)}
@@ -43,13 +44,7 @@ export function Tabs({
   );
 }
 
-export function TabPanel({
-  active,
-  children,
-}: {
-  active: boolean;
-  children: ReactNode;
-}) {
+export function TabPanel({ active, children }: { active: boolean; children: ReactNode }) {
   if (!active) return null;
   return <div role="tabpanel">{children}</div>;
 }

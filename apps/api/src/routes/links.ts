@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { and, eq } from 'drizzle-orm';
 import { newId, projectLinks } from '@connect/db';
 import { ConnectError, environmentSchema } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
+import type { AppDeps } from '../deps.js';
 import { findConnector } from './connectors.js';
 import { findProject } from './projects.js';
 
@@ -29,9 +29,11 @@ export function linkRoutes(deps: AppDeps) {
     }
     // scope to org: join through projects
     const orgProjects = new Set(
-      (await deps.db.query.projects.findMany({ where: (p, { eq: e }) => e(p.orgId, principal.orgId) })).map(
-        (p) => p.id,
-      ),
+      (
+        await deps.db.query.projects.findMany({
+          where: (p, { eq: e }) => e(p.orgId, principal.orgId),
+        })
+      ).map((p) => p.id),
     );
     return c.json({ links: rows.filter((r) => orgProjects.has(r.projectId)) });
   });
@@ -57,7 +59,9 @@ export function linkRoutes(deps: AppDeps) {
       const [existing] = await deps.db
         .select()
         .from(projectLinks)
-        .where(and(eq(projectLinks.projectId, project.id), eq(projectLinks.connectorId, connector.id)))
+        .where(
+          and(eq(projectLinks.projectId, project.id), eq(projectLinks.connectorId, connector.id)),
+        )
         .limit(1);
 
       const values = {
@@ -90,7 +94,11 @@ export function linkRoutes(deps: AppDeps) {
         action: existing ? 'link.update' : 'link.create',
         targetType: 'project_link',
         targetId: row!.id,
-        metadata: { project: project.slug, connector: connector.slug, environments: input.environments },
+        metadata: {
+          project: project.slug,
+          connector: connector.slug,
+          environments: input.environments,
+        },
       });
       return c.json({ link: row }, existing ? 200 : 201);
     },
@@ -99,7 +107,11 @@ export function linkRoutes(deps: AppDeps) {
   app.delete('/:id', async (c) => {
     const principal = c.get('principal');
     requireRole(principal, 'admin');
-    const [row] = await deps.db.select().from(projectLinks).where(eq(projectLinks.id, c.req.param('id'))).limit(1);
+    const [row] = await deps.db
+      .select()
+      .from(projectLinks)
+      .where(eq(projectLinks.id, c.req.param('id')))
+      .limit(1);
     if (!row) throw new ConnectError('not_found', 'link not found');
     const project = await findProject(deps, principal.orgId, row.projectId); // org check
     await deps.db.delete(projectLinks).where(eq(projectLinks.id, row.id));

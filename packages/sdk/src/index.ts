@@ -1,8 +1,8 @@
 import type { TokenRequest, TokenResponse } from '@connect/shared';
 import { ConnectError, errorFromResponse } from './errors.js';
 
-export * from './errors.js';
 export { ConnectClient } from './client.js';
+export * from './errors.js';
 
 export interface GetTokenParams {
   connector: string;

@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
-import { newId, projectClients, projects } from '@connect/db';
 import { generateSecret } from '@connect/crypto';
+import { newId, projectClients, projects } from '@connect/db';
 import { ConnectError, environmentSchema, slugSchema } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import { isUniqueViolation } from '../db-errors.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
+import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
+import { isUniqueViolation } from '../db-errors.js';
+import type { AppDeps } from '../deps.js';
 
 export function projectRoutes(deps: AppDeps) {
   const app = new Hono<AuthEnv>();
@@ -85,7 +85,9 @@ export function projectRoutes(deps: AppDeps) {
         metadata: { clientId, environment },
       });
       return c.json(
-        { client: { clientId, clientSecret: secret.plaintext, environment, projectId: project.id } },
+        {
+          client: { clientId, clientSecret: secret.plaintext, environment, projectId: project.id },
+        },
         201,
       );
     },

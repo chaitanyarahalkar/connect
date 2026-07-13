@@ -1,4 +1,4 @@
-import { auditLogs, newId, usageEvents, type Db } from '@connect/db';
+import { auditLogs, type Db, newId, usageEvents } from '@connect/db';
 import { redact } from '@connect/shared';
 import type { Principal } from './auth/principal.js';
 

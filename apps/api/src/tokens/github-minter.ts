@@ -1,9 +1,9 @@
-import { SignJWT, importPKCS8 } from 'jose';
 import { ConnectError } from '@connect/shared';
+import { importPKCS8, SignJWT } from 'jose';
+import type { CachedToken } from './cache.js';
 import type { Minter } from './minters.js';
 import { readConnectorSecret } from './minters.js';
 import { mintOAuth2Token } from './oauth2-minter.js';
-import type { CachedToken } from './cache.js';
 
 const GITHUB_API = process.env.GITHUB_API_URL ?? 'https://api.github.com';
 
@@ -64,9 +64,13 @@ export const mintGithubToken: Minter = async (ctx) => {
   );
   const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok || typeof raw.token !== 'string') {
-    throw new ConnectError('provider_error', `github installation token request failed (${res.status})`, {
-      providerMessage: raw.message,
-    });
+    throw new ConnectError(
+      'provider_error',
+      `github installation token request failed (${res.status})`,
+      {
+        providerMessage: raw.message,
+      },
+    );
   }
 
   const token: CachedToken = {

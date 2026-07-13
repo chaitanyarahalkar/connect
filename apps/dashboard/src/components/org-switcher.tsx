@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useOrg } from '@/lib/org-context';
-import { apiFetch } from '@/lib/api';
-import { slugify, cn } from '@/lib/utils';
-import type { Org } from '@/lib/types';
-import { Dialog } from '@/components/ui/dialog';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import { useOrg } from '@/lib/org-context';
+import type { Org } from '@/lib/types';
+import { cn, slugify } from '@/lib/utils';
 
 export function OrgSwitcher() {
   const { orgs, activeOrg, setActiveOrg, refetchOrgs } = useOrg();
@@ -64,7 +64,16 @@ export function OrgSwitcher() {
         className="flex w-full items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
       >
         <span className="truncate">{activeOrg?.name ?? 'Select organization'}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-zinc-400">
+        <svg
+          aria-hidden="true"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="shrink-0 text-zinc-400"
+        >
           <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
         </svg>
       </button>

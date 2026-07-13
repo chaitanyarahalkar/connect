@@ -1,20 +1,20 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { and, eq, isNull } from 'drizzle-orm';
-import { installations, newId } from '@connect/db';
-import { ConnectError, type OAuthConfig } from '@connect/shared';
 import { quirksFor } from '@connect/connectors';
-import type { AppDeps } from '../deps.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
+import { installations, newId } from '@connect/db';
+import { ConnectError } from '@connect/shared';
+import { zValidator } from '@hono/zod-validator';
+import { and, eq, isNull } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
+import type { AppDeps } from '../deps.js';
+import { logger } from '../logger.js';
 import { buildAuthorizationUrl, discover, exchangeCode } from '../oauth/engine.js';
+import { storeGrant } from '../oauth/grants.js';
 import { codeChallengeS256, generateCodeVerifier } from '../oauth/pkce.js';
 import { consumeState, createState } from '../oauth/state.js';
-import { storeGrant } from '../oauth/grants.js';
+import { oauthClientOf, oauthConfigOf } from '../tokens/oauth2-minter.js';
 import { findConnector } from './connectors.js';
-import { oauthConfigOf, oauthClientOf } from '../tokens/oauth2-minter.js';
-import { logger } from '../logger.js';
 
 function redirectUriFor(deps: AppDeps): string {
   return `${deps.config.issuer}/v1/oauth/callback`;
@@ -67,16 +67,12 @@ export function oauthAuthorizeRoutes(deps: AppDeps) {
     },
   );
 
-  app.post(
-    '/discover',
-    zValidator('json', z.object({ issuer: z.string().url() })),
-    async (c) => {
-      const principal = c.get('principal');
-      requireRole(principal, 'member');
-      const partial = await discover(c.req.valid('json').issuer, deps.providerFetch);
-      return c.json({ config: partial });
-    },
-  );
+  app.post('/discover', zValidator('json', z.object({ issuer: z.string().url() })), async (c) => {
+    const principal = c.get('principal');
+    requireRole(principal, 'member');
+    const partial = await discover(c.req.valid('json').issuer, deps.providerFetch);
+    return c.json({ config: partial });
+  });
 
   return app;
 }
@@ -88,7 +84,9 @@ export function oauthCallbackRoutes(deps: AppDeps) {
   app.get('/v1/oauth/callback', async (c) => {
     const { code, state, error } = c.req.query();
     if (error) {
-      return c.redirect(`${deps.config.dashboardUrl}/connectors?error=${encodeURIComponent(error)}`);
+      return c.redirect(
+        `${deps.config.dashboardUrl}/connectors?error=${encodeURIComponent(error)}`,
+      );
     }
     if (!code || !state) {
       throw new ConnectError('validation_error', 'missing code or state');
@@ -127,14 +125,28 @@ export function oauthCallbackRoutes(deps: AppDeps) {
     });
 
     if (tokenSet.refreshToken) {
-      await storeGrant(deps.db, deps.keyProvider, installationId, 'refresh_token', tokenSet.refreshToken, {
-        scopes: tokenSet.scope?.split(/[ ,]+/).filter(Boolean) ?? [],
-      });
+      await storeGrant(
+        deps.db,
+        deps.keyProvider,
+        installationId,
+        'refresh_token',
+        tokenSet.refreshToken,
+        {
+          scopes: tokenSet.scope?.split(/[ ,]+/).filter(Boolean) ?? [],
+        },
+      );
     } else {
-      await storeGrant(deps.db, deps.keyProvider, installationId, 'access_token', tokenSet.accessToken, {
-        scopes: tokenSet.scope?.split(/[ ,]+/).filter(Boolean) ?? [],
-        expiresAt: tokenSet.expiresIn ? new Date(Date.now() + tokenSet.expiresIn * 1000) : null,
-      });
+      await storeGrant(
+        deps.db,
+        deps.keyProvider,
+        installationId,
+        'access_token',
+        tokenSet.accessToken,
+        {
+          scopes: tokenSet.scope?.split(/[ ,]+/).filter(Boolean) ?? [],
+          expiresAt: tokenSet.expiresIn ? new Date(Date.now() + tokenSet.expiresIn * 1000) : null,
+        },
+      );
     }
 
     await writeAudit(deps.db, null, {

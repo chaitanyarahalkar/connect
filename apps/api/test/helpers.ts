@@ -1,12 +1,22 @@
-import { Redis } from 'ioredis';
 import { randomBytes } from 'node:crypto';
-import { createDb, newId, organizations, memberships, projects, projectLinks, accessTokens, connectors, user } from '@connect/db';
+import { generateSecret, randomToken } from '@connect/crypto';
+import {
+  accessTokens,
+  connectors,
+  createDb,
+  memberships,
+  newId,
+  organizations,
+  projectLinks,
+  projects,
+  user,
+} from '@connect/db';
 import { runMigrations } from '@connect/db/migrate';
 import { storeSeedSecret } from '@connect/db/seed-secrets';
-import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
-import { loadConfig, type ApiConfig } from '../src/config.js';
-import { createDeps, type AppDeps } from '../src/deps.js';
+import { Redis } from 'ioredis';
 import { buildApp } from '../src/app.js';
+import { type ApiConfig, loadConfig } from '../src/config.js';
+import { type AppDeps, createDeps } from '../src/deps.js';
 
 export const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect_test';
@@ -76,7 +86,9 @@ export interface SeededOrg {
 export async function seedOrg(deps: AppDeps, slugPrefix = 't'): Promise<SeededOrg> {
   const suffix = randomToken(6);
   const orgId = newId.org();
-  await deps.db.insert(organizations).values({ id: orgId, name: 'Test Org', slug: `${slugPrefix}-${suffix}` });
+  await deps.db
+    .insert(organizations)
+    .values({ id: orgId, name: 'Test Org', slug: `${slugPrefix}-${suffix}` });
   const userId = newId.user();
   await deps.db.insert(user).values({
     id: userId,
@@ -84,10 +96,14 @@ export async function seedOrg(deps: AppDeps, slugPrefix = 't'): Promise<SeededOr
     email: `tester-${suffix}@test.dev`,
     emailVerified: true,
   });
-  await deps.db.insert(memberships).values({ id: newId.membership(), orgId, userId, role: 'owner' });
+  await deps.db
+    .insert(memberships)
+    .values({ id: newId.membership(), orgId, userId, role: 'owner' });
 
   const projectId = newId.project();
-  await deps.db.insert(projects).values({ id: projectId, orgId, name: 'App', slug: `app-${suffix}` });
+  await deps.db
+    .insert(projects)
+    .values({ id: projectId, orgId, name: 'App', slug: `app-${suffix}` });
 
   const apiKeyConnectorId = newId.connector();
   await deps.db.insert(connectors).values({
@@ -132,7 +148,9 @@ export async function json(res: Response): Promise<any> {
 }
 
 /** Bridges the SDK's fetch option to Hono's in-process app.request. */
-export function appFetch(app: { request: (input: any, init?: any) => Response | Promise<Response> }): typeof fetch {
+export function appFetch(app: {
+  request: (input: any, init?: any) => Response | Promise<Response>;
+}): typeof fetch {
   return ((input: any, init?: any) => Promise.resolve(app.request(input, init))) as typeof fetch;
 }
 

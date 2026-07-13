@@ -1,20 +1,20 @@
-import { Hono } from 'hono';
 import { timingSafeEqual } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
-import type { Queue } from 'bullmq';
 import { connectors, newId, triggers, webhookDeliveries, webhookEvents } from '@connect/db';
 import { redact } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import { readConnectorSecret } from '../tokens/minters.js';
+import type { Queue } from 'bullmq';
+import { and, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
 import { isUniqueViolation } from '../db-errors.js';
+import type { AppDeps } from '../deps.js';
+import { logger } from '../logger.js';
+import { readConnectorSecret } from '../tokens/minters.js';
+import { DELIVERY_JOB_OPTIONS, type DeliveryJob } from './queue.js';
 import {
+  type VerificationResult,
   verifyGenericSignature,
   verifyGithubSignature,
   verifySlackSignature,
-  type VerificationResult,
 } from './verify.js';
-import { DELIVERY_JOB_OPTIONS, type DeliveryJob } from './queue.js';
-import { logger } from '../logger.js';
 
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a);
@@ -42,7 +42,9 @@ export function webhookIngestRoutes(deps: AppDeps, queue: Queue<DeliveryJob>) {
 
     const rawBody = Buffer.from(await c.req.arrayBuffer());
     const headers: Record<string, string | undefined> = {};
-    c.req.raw.headers.forEach((v, k) => (headers[k.toLowerCase()] = v));
+    c.req.raw.headers.forEach((v, k) => {
+      headers[k.toLowerCase()] = v;
+    });
 
     const verification = await verifyByType(deps, connector, rawBody, headers);
 
@@ -85,7 +87,10 @@ export function webhookIngestRoutes(deps: AppDeps, queue: Queue<DeliveryJob>) {
 
     if (!verification.valid) {
       // stored for debugging, never forwarded
-      logger.warn({ connector: connector.slug, reason: verification.reason }, 'webhook signature invalid');
+      logger.warn(
+        { connector: connector.slug, reason: verification.reason },
+        'webhook signature invalid',
+      );
       return c.json({ error: { code: 'unauthorized', message: verification.reason } }, 401);
     }
 
@@ -119,7 +124,12 @@ async function verifyByType(
   headers: Record<string, string | undefined>,
 ): Promise<VerificationResult> {
   if (connector.type === 'github') {
-    const secret = await readConnectorSecret(deps.db, deps.keyProvider, connector.id, 'webhook_secret');
+    const secret = await readConnectorSecret(
+      deps.db,
+      deps.keyProvider,
+      connector.id,
+      'webhook_secret',
+    );
     if (!secret) return { valid: false, reason: 'no webhook secret configured' };
     return verifyGithubSignature(rawBody, headers, secret);
   }
@@ -133,7 +143,12 @@ async function verifyByType(
     if (!secret) return { valid: false, reason: 'no signing secret configured' };
     return verifySlackSignature(rawBody, headers, secret);
   }
-  const secret = await readConnectorSecret(deps.db, deps.keyProvider, connector.id, 'webhook_secret');
+  const secret = await readConnectorSecret(
+    deps.db,
+    deps.keyProvider,
+    connector.id,
+    'webhook_secret',
+  );
   if (!secret) return { valid: false, reason: 'no webhook secret configured' };
   return verifyGenericSignature(rawBody, headers, secret);
 }

@@ -1,20 +1,20 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useApi } from '@/lib/use-api';
+import { InstallationsTab } from '@/components/connector/installations-tab';
+import { LinksTab } from '@/components/connector/links-tab';
+import { ConnectorOverviewTab } from '@/components/connector/overview-tab';
+import { ConnectorSettingsTab } from '@/components/connector/settings-tab';
+import { TriggersTab } from '@/components/connector/triggers-tab';
+import { ErrorText, Spinner } from '@/components/feedback';
+import { useToast } from '@/components/toast';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import { TYPE_LABELS } from '@/lib/labels';
 import type { Connector } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabPanel } from '@/components/ui/tabs';
-import { Spinner, ErrorText } from '@/components/feedback';
-import { useToast } from '@/components/toast';
-import { ConnectorOverviewTab } from '@/components/connector/overview-tab';
-import { InstallationsTab } from '@/components/connector/installations-tab';
-import { LinksTab } from '@/components/connector/links-tab';
-import { TriggersTab } from '@/components/connector/triggers-tab';
-import { ConnectorSettingsTab } from '@/components/connector/settings-tab';
+import { useApi } from '@/lib/use-api';
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -70,12 +70,7 @@ export default function ConnectorDetailPage({ params }: { params: Promise<{ id: 
             {connector.status}
           </Badge>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          loading={toggling}
-          onClick={() => void toggleStatus()}
-        >
+        <Button variant="outline" size="sm" loading={toggling} onClick={() => void toggleStatus()}>
           {connector.status === 'active' ? 'Disable' : 'Enable'}
         </Button>
       </div>

@@ -1,8 +1,8 @@
-import { eq, and } from 'drizzle-orm';
+import { encryptSecret, type KeyProvider, secretAad } from '@connect/crypto';
+import { and, eq } from 'drizzle-orm';
 import type { Db } from './client.js';
 import { newId } from './ids.js';
 import { connectorSecrets } from './schema.js';
-import { encryptSecret, secretAad, type KeyProvider } from '@connect/crypto';
 
 type SecretKind = (typeof connectorSecrets.$inferSelect)['kind'];
 
@@ -22,7 +22,9 @@ export async function storeSeedSecret(
   if (existing) {
     await db
       .update(connectorSecrets)
-      .set({ ciphertext: encryptSecret(kp, secretAad('connector_secrets', existing.id, kind), value) })
+      .set({
+        ciphertext: encryptSecret(kp, secretAad('connector_secrets', existing.id, kind), value),
+      })
       .where(eq(connectorSecrets.id, existing.id));
     return;
   }

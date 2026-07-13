@@ -1,8 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHmac } from 'node:crypto';
-import { eq } from 'drizzle-orm';
 import { webhookDeliveries } from '@connect/db';
 import type { Worker } from 'bullmq';
+import { eq } from 'drizzle-orm';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDeliveryWorker } from '../src/webhooks/queue.js';
 import { verifyGenericSignature } from '../src/webhooks/verify.js';
 import {
@@ -11,8 +11,8 @@ import {
   ensureMigrated,
   json,
   resetState,
-  seedOrg,
   type SeededOrg,
+  seedOrg,
   type TestHarness,
 } from './helpers.js';
 
@@ -58,7 +58,9 @@ function ingest(payload: Record<string, unknown>, headers: Record<string, string
 }
 
 /** Waits until every delivery for the trigger reaches a terminal-enough state. */
-async function waitForDeliveries(predicate: (rows: (typeof webhookDeliveries.$inferSelect)[]) => boolean) {
+async function waitForDeliveries(
+  predicate: (rows: (typeof webhookDeliveries.$inferSelect)[]) => boolean,
+) {
   for (let i = 0; i < 50; i++) {
     const rows = await h.deps.db
       .select()

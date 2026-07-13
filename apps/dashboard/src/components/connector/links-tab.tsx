@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '@/lib/api';
-import { useApi } from '@/lib/use-api';
-import type { Connector, Environment, Project, ProjectLink } from '@/lib/types';
+import { type FormEvent, useMemo, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -16,10 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import type { Connector, Environment, Project, ProjectLink } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
 
 const ENVIRONMENTS: Environment[] = ['production', 'preview', 'development'];
 
@@ -193,7 +193,10 @@ export function LinksTab({ connector }: { connector: Connector }) {
           {(projects.data?.projects.length ?? 0) === 0 ? (
             <p className="text-sm text-zinc-500">
               No projects yet.{' '}
-              <Link href="/projects" className="font-medium text-zinc-800 underline underline-offset-2">
+              <Link
+                href="/projects"
+                className="font-medium text-zinc-800 underline underline-offset-2"
+              >
                 Create one first
               </Link>
               .

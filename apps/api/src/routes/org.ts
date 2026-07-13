@@ -1,9 +1,8 @@
-import { Hono } from 'hono';
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { auditLogs, memberships, organizations, usageEvents, user } from '@connect/db';
-import { ConnectError } from '@connect/shared';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
 import type { AppDeps } from '../deps.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
 
 export function orgRoutes(deps: AppDeps) {
   const app = new Hono<AuthEnv>();

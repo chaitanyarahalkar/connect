@@ -1,4 +1,5 @@
-const SENSITIVE_KEY = /(authorization|token|secret|password|api[-_]?key|client[-_]?secret|assertion|code|cookie|set-cookie|private[-_]?key)/i;
+const SENSITIVE_KEY =
+  /(authorization|token|secret|password|api[-_]?key|client[-_]?secret|assertion|code|cookie|set-cookie|private[-_]?key)/i;
 
 /**
  * Recursively redacts values whose keys look sensitive. Used before storing

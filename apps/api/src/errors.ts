@@ -1,8 +1,8 @@
+import { ConnectError } from '@connect/shared';
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { ZodError } from 'zod';
-import { ConnectError } from '@connect/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { ZodError } from 'zod';
 import { logger } from './logger.js';
 
 export function errorHandler(err: Error, c: Context): Response {
@@ -11,7 +11,13 @@ export function errorHandler(err: Error, c: Context): Response {
   }
   if (err instanceof ZodError) {
     return c.json(
-      { error: { code: 'validation_error', message: 'invalid request', details: { issues: err.issues } } },
+      {
+        error: {
+          code: 'validation_error',
+          message: 'invalid request',
+          details: { issues: err.issues },
+        },
+      },
       400,
     );
   }

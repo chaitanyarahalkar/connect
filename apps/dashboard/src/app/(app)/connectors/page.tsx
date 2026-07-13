@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useApi } from '@/lib/use-api';
-import type { Connector } from '@/lib/types';
-import { TYPE_LABELS } from '@/lib/labels';
-import { Button } from '@/components/ui/button';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
+import { TYPE_LABELS } from '@/lib/labels';
+import type { Connector } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
 import { formatDate } from '@/lib/utils';
 
 export default function ConnectorsPage() {

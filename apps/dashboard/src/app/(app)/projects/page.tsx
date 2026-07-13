@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useApi } from '@/lib/use-api';
-import { apiFetch } from '@/lib/api';
-import { slugify, formatDate } from '@/lib/utils';
-import type { Project } from '@/lib/types';
+import { type FormEvent, useState } from 'react';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -18,8 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import type { Project } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
+import { formatDate, slugify } from '@/lib/utils';
 
 export default function ProjectsPage() {
   const { toast } = useToast();

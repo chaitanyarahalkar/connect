@@ -1,11 +1,11 @@
-import { Hono } from 'hono';
+import { verifySecret } from '@connect/crypto';
+import { projectClients, projects } from '@connect/db';
+import { ConnectError, oidcTokenRequestSchema } from '@connect/shared';
 import { zValidator } from '@hono/zod-validator';
 import { and, eq, isNull } from 'drizzle-orm';
-import { projectClients, projects } from '@connect/db';
-import { verifySecret } from '@connect/crypto';
-import { ConnectError, oidcTokenRequestSchema } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
+import { Hono } from 'hono';
 import type { IssuerService } from '../auth/issuer.js';
+import type { AppDeps } from '../deps.js';
 
 /** Public (unauthenticated) issuer endpoints: discovery, JWKS, client-credentials. */
 export function oidcRoutes(deps: AppDeps, issuer: IssuerService) {

@@ -1,19 +1,19 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { and, desc, eq, or } from 'drizzle-orm';
-import { connectors, installations, newId } from '@connect/db';
 import { randomToken } from '@connect/crypto';
+import { connectors, installations, newId } from '@connect/db';
 import {
-  ConnectError,
   brandingSchema,
+  ConnectError,
   createConnectorSchema,
   oauthConfigSchema,
 } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import { isUniqueViolation } from '../db-errors.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
+import { zValidator } from '@hono/zod-validator';
+import { and, desc, eq, or } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
+import { isUniqueViolation } from '../db-errors.js';
+import type { AppDeps } from '../deps.js';
 import { storeConnectorSecret } from '../secrets.js';
 import { TokenCache } from '../tokens/cache.js';
 
@@ -60,7 +60,10 @@ export function connectorRoutes(deps: AppDeps) {
     requireRole(principal, 'admin');
     const input = c.req.valid('json');
 
-    if ((input.type === 'oauth2' || input.type === 'github' || input.type === 'slack') && !input.oauthConfig) {
+    if (
+      (input.type === 'oauth2' || input.type === 'github' || input.type === 'slack') &&
+      !input.oauthConfig
+    ) {
       throw new ConnectError('validation_error', `${input.type} connectors require oauthConfig`);
     }
 
@@ -93,7 +96,9 @@ export function connectorRoutes(deps: AppDeps) {
     if (input.secrets?.githubAppId) {
       await deps.db
         .update(connectors)
-        .set({ oauthConfig: { ...(input.oauthConfig ?? {}), githubAppId: input.secrets.githubAppId } })
+        .set({
+          oauthConfig: { ...(input.oauthConfig ?? {}), githubAppId: input.secrets.githubAppId },
+        })
         .where(eq(connectors.id, id));
     }
 
@@ -173,7 +178,10 @@ export function connectorRoutes(deps: AppDeps) {
       const row = await findConnector(deps, principal.orgId, c.req.param('id'));
       const input = c.req.valid('json');
       if (input.oauthClientId) {
-        await deps.db.update(connectors).set({ clientId: input.oauthClientId }).where(eq(connectors.id, row.id));
+        await deps.db
+          .update(connectors)
+          .set({ clientId: input.oauthClientId })
+          .where(eq(connectors.id, row.id));
       }
       for (const [field, kind] of Object.entries(SECRET_KIND_MAP)) {
         const value = input[field as keyof typeof SECRET_KIND_MAP];
