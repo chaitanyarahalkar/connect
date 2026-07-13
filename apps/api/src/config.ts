@@ -38,7 +38,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     redisUrl: env.REDIS_URL ?? 'redis://localhost:6379',
     masterKey: required('CONNECT_MASTER_KEY'),
     issuer: env.CONNECT_ISSUER ?? 'http://localhost:4000',
-    port: Number(env.API_PORT ?? 4000),
+    port: Number(env.PORT ?? env.API_PORT ?? 4000),
     dashboardUrl: env.DASHBOARD_URL ?? 'http://localhost:3000',
     betterAuthSecret: env.BETTER_AUTH_SECRET ?? 'dev-only-insecure-secret',
     apiKeyTokenTtl: Number(env.API_KEY_TOKEN_TTL ?? 900),

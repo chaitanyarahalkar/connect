@@ -1,14 +1,14 @@
 'use client';
 
-import { API_URL } from '@/lib/api';
+import { PUBLIC_API_URL } from '@/lib/api';
 import type { Connector } from '@/lib/types';
 import { formatDateTime } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CopyField } from '@/components/copy-button';
 
 export function ConnectorOverviewTab({ connector }: { connector: Connector }) {
-  const callbackUrl = `${API_URL}/v1/oauth/callback`;
-  const ingestUrl = `${API_URL}/v1/webhooks/${connector.id}/${connector.ingestKey}`;
+  const callbackUrl = `${PUBLIC_API_URL}/v1/oauth/callback`;
+  const ingestUrl = `${PUBLIC_API_URL}/v1/webhooks/${connector.id}/${connector.ingestKey}`;
   const cfg = connector.oauthConfig;
 
   return (

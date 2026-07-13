@@ -3,7 +3,7 @@
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useApi } from '@/lib/use-api';
-import { apiFetch, API_URL } from '@/lib/api';
+import { apiFetch, PUBLIC_API_URL } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type {
   Connector,
@@ -92,7 +92,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const envSnippet = created
     ? [
-        `CONNECT_API_URL=${API_URL}`,
+        `CONNECT_API_URL=${PUBLIC_API_URL}`,
         `CONNECT_CLIENT_ID=${created.clientId}`,
         `CONNECT_CLIENT_SECRET=${created.clientSecret}`,
       ].join('\n')

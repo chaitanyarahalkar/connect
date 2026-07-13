@@ -7,6 +7,8 @@ import type { AppDeps } from '../deps.js';
 import type { Principal } from './principal.js';
 import type { SessionResolver } from './middleware.js';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export type BetterAuth = ReturnType<typeof createAuth>;
 
 export function createAuth(deps: AppDeps) {
@@ -16,6 +18,12 @@ export function createAuth(deps: AppDeps) {
     basePath: '/api/auth',
     trustedOrigins: [deps.config.dashboardUrl],
     emailAndPassword: { enabled: true },
+    advanced: {
+      defaultCookieAttributes: {
+        sameSite: isProd ? 'none' : 'lax',
+        secure: isProd,
+      },
+    },
     database: drizzleAdapter(deps.db, {
       provider: 'pg',
       schema: { user, session, account, verification },
