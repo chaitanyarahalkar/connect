@@ -33,6 +33,32 @@ export const oauthConfigSchema = z.object({
 });
 export type OAuthConfig = z.infer<typeof oauthConfigSchema>;
 
+/**
+ * Per-connector token policy, enforced on every POST /v1/tokens:
+ * subject/scope allow-lists, a cap on returned token lifetime, and an
+ * installation-scoped fixed-window rate limit.
+ */
+export const tokenPolicySchema = z.object({
+  /** Cap on returned token lifetime (seconds); longer-lived results are clamped. */
+  maxTtlSeconds: z.number().int().min(30).max(86_400).optional(),
+  /** Scopes a caller may request. Absent = no restriction. */
+  allowedScopes: z.array(z.string()).optional(),
+  /** Subject types a caller may use. Absent = no restriction. */
+  allowedSubjects: z.array(z.enum(['app', 'user', 'jwt-bearer'])).optional(),
+  /**
+   * Token requests allowed per installation per window (cache hits count).
+   * Requests without an installation (api_key, bare jwt-bearer) share one
+   * connector-wide bucket.
+   */
+  rateLimit: z
+    .object({
+      limit: z.number().int().min(1),
+      windowSeconds: z.number().int().min(1).max(3600),
+    })
+    .optional(),
+});
+export type TokenPolicy = z.infer<typeof tokenPolicySchema>;
+
 export const brandingSchema = z.object({
   iconUrl: z.string().url().optional(),
   color: z
@@ -48,6 +74,7 @@ export const createConnectorSchema = z.object({
   type: connectorTypeSchema,
   oauthConfig: oauthConfigSchema.optional(),
   branding: brandingSchema.optional(),
+  tokenPolicy: tokenPolicySchema.optional(),
   /** Write-only secrets supplied at create time. Never returned. */
   secrets: z
     .object({

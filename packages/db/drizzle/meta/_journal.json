@@ -15,6 +15,13 @@
       "when": 1783970869423,
       "tag": "0001_massive_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783971455989,
+      "tag": "0002_simple_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

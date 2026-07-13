@@ -5,6 +5,7 @@ import {
   ConnectError,
   createConnectorSchema,
   oauthConfigSchema,
+  tokenPolicySchema,
 } from '@connect/shared';
 import { zValidator } from '@hono/zod-validator';
 import { and, desc, eq, or } from 'drizzle-orm';
@@ -35,6 +36,7 @@ function serialize(row: typeof connectors.$inferSelect) {
     status: row.status,
     branding: row.branding,
     oauthConfig: row.oauthConfig,
+    tokenPolicy: row.tokenPolicy,
     clientId: row.clientId,
     ingestKey: row.ingestKey,
     createdAt: row.createdAt.toISOString(),
@@ -78,6 +80,7 @@ export function connectorRoutes(deps: AppDeps) {
         type: input.type,
         branding: input.branding ?? null,
         oauthConfig: input.oauthConfig ?? null,
+        tokenPolicy: input.tokenPolicy ?? null,
         clientId: input.secrets?.oauthClientId ?? null,
         ingestKey: randomToken(24),
       })
@@ -128,6 +131,7 @@ export function connectorRoutes(deps: AppDeps) {
         status: z.enum(['active', 'disabled']).optional(),
         branding: brandingSchema.optional(),
         oauthConfig: oauthConfigSchema.optional(),
+        tokenPolicy: tokenPolicySchema.nullable().optional(),
       }),
     ),
     async (c) => {
@@ -142,10 +146,12 @@ export function connectorRoutes(deps: AppDeps) {
           ...(input.status ? { status: input.status } : {}),
           ...(input.branding ? { branding: input.branding } : {}),
           ...(input.oauthConfig ? { oauthConfig: input.oauthConfig } : {}),
+          ...(input.tokenPolicy !== undefined ? { tokenPolicy: input.tokenPolicy } : {}),
         })
         .where(eq(connectors.id, row.id))
         .returning();
-      if (input.status === 'disabled') {
+      // policy changes must not be served stale from the token cache
+      if (input.status === 'disabled' || input.tokenPolicy !== undefined) {
         await new TokenCache(deps.redis, deps.keyProvider).invalidateConnector(row.id);
       }
       await writeAudit(deps.db, principal, {

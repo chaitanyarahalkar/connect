@@ -14,6 +14,7 @@ import {
   mintApiKeyToken,
 } from './minters.js';
 import { mintOAuth2Token } from './oauth2-minter.js';
+import { clampTtl, enforceRateLimit, enforceTokenPolicy, tokenPolicyOf } from './policy.js';
 
 const minters: Record<ConnectorRow['type'], Minter> = {
   api_key: mintApiKeyToken,
@@ -33,6 +34,9 @@ export async function requestToken(
   const installation = await resolveInstallation(deps, connector, req);
 
   const scopes = req.scopes ?? [];
+  const policy = tokenPolicyOf(connector);
+  enforceTokenPolicy(policy, req, scopes);
+  await enforceRateLimit(deps.redis, policy, connector.id, installation?.id ?? null);
   const key = cacheKey({
     connectorId: connector.id,
     installationId: installation?.id ?? null,
@@ -96,7 +100,7 @@ async function mint(
       `connector type ${connector.type} is not supported yet`,
     );
   }
-  return minter({
+  const minted = await minter({
     deps,
     connector,
     installation,
@@ -105,6 +109,8 @@ async function mint(
     resource: req.resource,
     authorizationDetails: req.authorizationDetails,
   });
+  // clamped before caching, so the cache entry expires with the policy TTL too
+  return clampTtl(minted, tokenPolicyOf(connector));
 }
 
 async function resolveConnector(

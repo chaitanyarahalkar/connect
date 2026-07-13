@@ -67,6 +67,21 @@ Prefills from `packages/connectors/src/presets.ts`:
 - Quirks: scopes are passed comma-joined; Slack's HTTP-200-`ok:false` errors are handled; user tokens nested under `authed_user` are parsed; refresh rotation is on; installations are labeled by workspace (`team.id`/`team.name`)
 - Set `slackSigningSecret` to enable inbound webhook verification (see [Triggers & webhooks](/connect/guides/triggers/))
 
+## Token policy
+
+Every connector can carry a `tokenPolicy` (set in the dashboard's Settings tab or via `PATCH /v1/connectors/:id`), enforced on every `POST /v1/tokens`:
+
+```jsonc
+{
+  "maxTtlSeconds": 600,               // clamp the advertised token lifetime
+  "allowedScopes": ["chat:write"],    // requests outside the list → scope_not_allowed (403)
+  "allowedSubjects": ["app"],         // → subject_not_allowed (403)
+  "rateLimit": { "limit": 100, "windowSeconds": 60 }
+}
+```
+
+The rate limit is a fixed window **scoped per installation** (requests without an installation share one connector-wide bucket) and counts cache hits — it limits token *requests*, not provider mints. Exceeding it returns `429 rate_limited` with a `Retry-After` header, which the SDK honors automatically. TTL clamping happens before the token is cached, so cached entries expire with the policy. Policy changes invalidate the connector's token cache.
+
 ## Installations
 
 One connector serves many tenants. An **installation** is one tenant's grant — created by the OAuth callback (matched on subject user or external account id), or registered manually for GitHub Apps. Token requests resolve an installation automatically: an explicit `installationId` wins; `user` subjects use that user's active installation; otherwise a single active installation is used, and multiple candidates raise `installation_ambiguous`.

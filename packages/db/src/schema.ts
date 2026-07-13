@@ -172,6 +172,8 @@ export const connectors = pgTable(
     branding: jsonb('branding'),
     /** OAuthConfig from @connect/shared for oauth2/github/slack types. */
     oauthConfig: jsonb('oauth_config'),
+    /** TokenPolicy from @connect/shared: TTL cap, scope/subject allow-lists, rate limit. */
+    tokenPolicy: jsonb('token_policy'),
     /** Public OAuth client id (not secret). */
     clientId: text('client_id'),
     /** Random path token for the webhook ingest URL. */

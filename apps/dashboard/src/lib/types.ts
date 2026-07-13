@@ -4,10 +4,11 @@ import type {
   Environment,
   OAuthConfig,
   Role,
+  TokenPolicy,
   TokenResponse,
 } from '@connect/shared';
 
-export type { Branding, ConnectorType, Environment, OAuthConfig, Role, TokenResponse };
+export type { Branding, ConnectorType, Environment, OAuthConfig, Role, TokenPolicy, TokenResponse };
 
 export interface Org {
   id: string;
@@ -31,6 +32,7 @@ export interface Connector {
   status: ConnectorStatus;
   branding: Branding | null;
   oauthConfig: Partial<OAuthConfig> | null;
+  tokenPolicy: TokenPolicy | null;
   clientId: string | null;
   ingestKey: string;
   createdAt: string;

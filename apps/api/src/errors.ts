@@ -7,6 +7,10 @@ import { logger } from './logger.js';
 
 export function errorHandler(err: Error, c: Context): Response {
   if (err instanceof ConnectError) {
+    const retryAfter = err.details?.retryAfterSeconds;
+    if (err.code === 'rate_limited' && typeof retryAfter === 'number') {
+      c.header('retry-after', String(retryAfter));
+    }
     return c.json(err.toBody(), err.status as ContentfulStatusCode);
   }
   if (err instanceof ZodError) {

@@ -17,6 +17,9 @@ export const ERROR_CODES = [
   'provider_error',
   'connector_disabled',
   'unsupported_subject',
+  // token policy
+  'scope_not_allowed',
+  'subject_not_allowed',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -47,6 +50,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   provider_error: 502,
   connector_disabled: 409,
   unsupported_subject: 400,
+  scope_not_allowed: 403,
+  subject_not_allowed: 403,
 };
 
 /** Thrown by API business logic; converted to an HTTP response by the error middleware. */
