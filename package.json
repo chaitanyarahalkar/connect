@@ -11,7 +11,7 @@
     "typecheck": "turbo typecheck",
     "db:migrate": "pnpm --filter @connect/db migrate",
     "db:seed": "pnpm --filter @connect/db seed",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "pnpm --filter @connect/api demo"
   },
   "pnpm": {
     "overrides": {

@@ -1,5 +1,7 @@
 import { serve } from '@hono/node-server';
-import { loadConfig } from './config.js';
+import { loadConfig, loadDotEnv } from './config.js';
+
+loadDotEnv();
 import { createDeps } from './deps.js';
 import { buildApp } from './app.js';
 import { createDeliveryWorker } from './webhooks/queue.js';

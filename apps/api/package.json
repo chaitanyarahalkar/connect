@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --pool=forks"
+    "test": "vitest run --pool=forks",
+    "demo": "tsx scripts/demo.ts"
   },
   "dependencies": {
     "@connect/connectors": "workspace:*",
