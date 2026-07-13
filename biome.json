@@ -41,6 +41,16 @@
   },
   "overrides": [
     {
+      "includes": ["packages/sdk/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/**", "packages/*/src/**", "packages/*/test/**", "!packages/sdk/**"],
       "linter": {
         "rules": {

@@ -1,8 +1,22 @@
 import type { ApiErrorBody, ErrorCode } from '@connect/shared';
 
+/**
+ * Every error code a {@link ConnectError} can carry: the server-defined
+ * `ErrorCode` union plus two client-side codes (`network_error` when all
+ * retry attempts fail to reach the server, `timeout` when a single attempt
+ * exceeds the configured timeout).
+ */
+export type ConnectErrorCode = ErrorCode | 'network_error' | 'timeout';
+
+/**
+ * Base class for every error thrown by the SDK.
+ *
+ * Carries the machine-readable `code`, the HTTP `status` when the error came
+ * from an API response, and optional structured `details` from the server.
+ */
 export class ConnectError extends Error {
   constructor(
-    public code: ErrorCode | 'network_error',
+    public code: ConnectErrorCode,
     message: string,
     public status?: number,
     public details?: Record<string, unknown>,
@@ -12,14 +26,26 @@ export class ConnectError extends Error {
   }
 }
 
+/** Thrown on `unauthorized` / `forbidden` responses — bad or missing Connect credentials. */
 export class ConnectAuthError extends ConnectError {}
+/** Thrown when the connector is not linked to the calling project (`link_not_found`). */
 export class LinkNotFoundError extends ConnectError {}
+/** Thrown when the project link does not enable the caller's environment (`environment_not_enabled`). */
 export class EnvironmentNotEnabledError extends ConnectError {}
+/** Thrown when an installation is required, ambiguous, or revoked — re-run the install flow. */
 export class InstallationRequiredError extends ConnectError {}
+/** Thrown when the subject user has not authorized the connector yet (`user_authorization_required`). */
 export class UserAuthorizationRequiredError extends ConnectError {}
+/** Thrown when the underlying provider grant has expired and must be re-authorized (`grant_expired`). */
 export class GrantExpiredError extends ConnectError {}
+/** Thrown when the upstream provider rejected the request (`provider_error`). */
 export class ProviderError extends ConnectError {}
 
+/**
+ * Map an API error response to the matching typed {@link ConnectError} subclass.
+ * Unknown or missing bodies fall back to a plain `ConnectError` with
+ * `internal_error`.
+ */
 export function errorFromResponse(status: number, body: unknown): ConnectError {
   const err = (body as ApiErrorBody | null)?.error;
   const code = (err?.code ?? 'internal_error') as ErrorCode;

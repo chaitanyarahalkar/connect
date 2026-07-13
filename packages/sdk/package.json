@@ -1,19 +1,53 @@
 {
   "name": "@connect/sdk",
   "version": "0.1.0",
+  "description": "Request short-lived, scoped provider tokens from Connect — refresh-ahead caching, retries with Retry-After, timeouts, and typed errors.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chaitanyarahalkar/connect.git",
+    "directory": "packages/sdk"
+  },
+  "keywords": [
+    "connect",
+    "oauth",
+    "tokens",
+    "credential-broker",
+    "workload-identity"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   },
-  "dependencies": {
-    "@connect/shared": "workspace:*"
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage"
   },
   "devDependencies": {
+    "@connect/shared": "workspace:*",
     "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^3.2.7",
+    "tsup": "^8.5.1",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
   }

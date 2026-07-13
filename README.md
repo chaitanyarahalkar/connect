@@ -99,7 +99,18 @@ try {
 }
 ```
 
-The SDK caches in-process, refreshes ahead of expiry in the background, de-dupes concurrent calls, and retries 5xx/429 with jitter. Tokens are also cached server-side (encrypted, in Redis) so a fleet of instances shares mints.
+The SDK caches in-process (LRU), refreshes ahead of expiry in the background, de-dupes concurrent calls, and retries 5xx/429 with jittered backoff, honoring `Retry-After` and per-attempt timeouts. Tokens are also cached server-side (encrypted, in Redis) so a fleet of instances shares mints.
+
+For isolated configuration (timeouts, retry policy, cache size, observability hooks), instantiate a client instead of using the module-level `getToken`:
+
+```ts
+import { Connect } from '@connect/sdk';
+
+const connect = new Connect({ timeoutMs: 5000, onRetry: (e) => log.warn(e) });
+const { token } = await connect.getToken({ connector: 'github', scopes: ['repo'] });
+```
+
+See [`packages/sdk/README.md`](packages/sdk/README.md) for the full configuration and error reference.
 
 ## CLI
 
