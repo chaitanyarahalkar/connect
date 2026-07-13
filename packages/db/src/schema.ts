@@ -19,7 +19,13 @@ export * from './auth-schema.js';
 
 export const roleEnum = pgEnum('role', ['owner', 'admin', 'member']);
 export const environmentEnum = pgEnum('environment', ['production', 'preview', 'development']);
-export const connectorTypeEnum = pgEnum('connector_type', ['oauth2', 'api_key', 'github', 'slack']);
+export const connectorTypeEnum = pgEnum('connector_type', [
+  'oauth2',
+  'api_key',
+  'github',
+  'slack',
+  'snowflake',
+]);
 export const connectorStatusEnum = pgEnum('connector_status', ['active', 'disabled']);
 export const secretKindEnum = pgEnum('secret_kind', [
   'oauth_client_secret',
@@ -27,6 +33,7 @@ export const secretKindEnum = pgEnum('secret_kind', [
   'webhook_secret',
   'github_app_private_key',
   'slack_signing_secret',
+  'snowflake_private_key',
 ]);
 export const installationStatusEnum = pgEnum('installation_status', [
   'pending',
@@ -50,6 +57,8 @@ export const deliveryStatusEnum = pgEnum('delivery_status', [
 ]);
 export const usageKindEnum = pgEnum('usage_kind', ['token_request', 'webhook_delivery']);
 export const actorTypeEnum = pgEnum('actor_type', ['user', 'access_token', 'workload', 'system']);
+export const masterKeyStatusEnum = pgEnum('master_key_status', ['active', 'retired']);
+export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'final']);
 
 // ---------------------------------------------------------------------------
 // Orgs / projects / identity
@@ -125,6 +134,25 @@ export const accessTokens = pgTable(
   (t) => [index('access_tokens_prefix_idx').on(t.tokenPrefix)],
 );
 
+/**
+ * KMS-wrapped master key (KEK) versions for envelope encryption. Only used
+ * when CONNECT_KEY_PROVIDER is aws-kms/gcp-kms; the env provider keeps its
+ * KEKs in env vars. Retired versions stay decryptable until every stored DEK
+ * has been re-wrapped by the rotation job.
+ */
+export const masterKeys = pgTable('master_keys', {
+  /** Monotonic version label ('v1', 'v2', …) recorded on every EncryptedBlob. */
+  version: text('version').primaryKey(),
+  provider: text('provider').notNull(),
+  /** Remote KMS key (ARN / resource name) that wraps this KEK. */
+  kmsKeyId: text('kms_key_id').notNull(),
+  /** base64 KMS ciphertext of the 32-byte KEK. */
+  wrappedKek: text('wrapped_kek').notNull(),
+  status: masterKeyStatusEnum('status').notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  retiredAt: timestamp('retired_at'),
+});
+
 /** ES256 signing keys for the OIDC issuer; private key is envelope-encrypted. */
 export const signingKeys = pgTable('signing_keys', {
   id: text('id').primaryKey(), // kid
@@ -152,6 +180,10 @@ export const connectors = pgTable(
     branding: jsonb('branding'),
     /** OAuthConfig from @connect/shared for oauth2/github/slack types. */
     oauthConfig: jsonb('oauth_config'),
+    /** Non-OAuth provider configuration (snowflake: SnowflakeConfig). */
+    providerConfig: jsonb('provider_config'),
+    /** TokenPolicy from @connect/shared: TTL cap, scope/subject allow-lists, rate limit. */
+    tokenPolicy: jsonb('token_policy'),
     /** Public OAuth client id (not secret). */
     clientId: text('client_id'),
     /** Random path token for the webhook ingest URL. */
@@ -347,6 +379,40 @@ export const usageEvents = pgTable(
     occurredAt: timestamp('occurred_at').notNull().defaultNow(),
   },
   (t) => [index('usage_events_org_time_idx').on(t.orgId, t.occurredAt)],
+);
+
+/** One row per org; absent row = free plan. */
+export const orgBilling = pgTable('org_billing', {
+  orgId: text('org_id')
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  /** PlanKey from @connect/shared. */
+  planKey: text('plan_key').notNull().default('free'),
+  /** Reserved for a payment-processor integration (e.g. Stripe customer). */
+  externalCustomerId: text('external_customer_id'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+/** Generated from usage_events for one calendar month. */
+export const invoices = pgTable(
+  'invoices',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    periodStart: timestamp('period_start').notNull(),
+    /** Exclusive. */
+    periodEnd: timestamp('period_end').notNull(),
+    planKey: text('plan_key').notNull(),
+    /** InvoiceLine[] from @connect/shared. */
+    lines: jsonb('lines').notNull(),
+    totalCents: integer('total_cents').notNull(),
+    /** Draft while the period is open; final once closed. */
+    status: invoiceStatusEnum('status').notNull().default('draft'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('invoices_org_period_uq').on(t.orgId, t.periodStart)],
 );
 
 export const auditLogs = pgTable(

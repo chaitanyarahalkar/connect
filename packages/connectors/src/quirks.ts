@@ -109,10 +109,70 @@ const githubQuirks: ProviderQuirks = {
   },
 };
 
+const googleQuirks: ProviderQuirks = {
+  // Google keeps the same refresh token across refreshes (rotation only on re-consent).
+  refreshRotates: false,
+  authorizeExtraParams: (scopes) => ({
+    scope: scopes.join(' '),
+    // without these Google only issues a refresh token on the user's first consent
+    access_type: 'offline',
+    prompt: 'consent',
+  }),
+  parseTokenResponse: parseStandardTokenResponse,
+  identify: async (tokenSet, _cfg, fetchImpl): Promise<ProviderIdentity> => {
+    const res = await fetchImpl('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { authorization: `Bearer ${tokenSet.accessToken}` },
+    });
+    if (!res.ok) return { externalAccountId: 'unknown' };
+    const body = (await res.json()) as Record<string, unknown>;
+    return {
+      externalAccountId: String(body.sub ?? 'unknown'),
+      externalAccountName:
+        typeof body.email === 'string'
+          ? body.email
+          : typeof body.name === 'string'
+            ? body.name
+            : undefined,
+    };
+  },
+};
+
+const salesforceQuirks: ProviderQuirks = {
+  refreshRotates: false,
+  // Salesforce access tokens live for the org's session timeout (2h default)
+  // and the token response carries no expires_in.
+  defaultExpirySeconds: 7200,
+  parseTokenResponse: parseStandardTokenResponse,
+  identify: async (tokenSet, _cfg, fetchImpl): Promise<ProviderIdentity> => {
+    // the token response's `id` field is an identity URL:
+    // https://login.salesforce.com/id/<orgId>/<userId>
+    const idUrl = typeof tokenSet.raw.id === 'string' ? tokenSet.raw.id : null;
+    if (!idUrl) return { externalAccountId: 'unknown' };
+    const parts = new URL(idUrl).pathname.split('/').filter(Boolean); // [id, orgId, userId]
+    const orgId = parts[1] ?? 'unknown';
+    const res = await fetchImpl(idUrl, {
+      headers: { authorization: `Bearer ${tokenSet.accessToken}` },
+    });
+    if (!res.ok) return { externalAccountId: orgId };
+    const body = (await res.json()) as Record<string, unknown>;
+    return {
+      externalAccountId: orgId,
+      externalAccountName:
+        typeof body.username === 'string'
+          ? body.username
+          : typeof body.display_name === 'string'
+            ? body.display_name
+            : undefined,
+    };
+  },
+};
+
 const QUIRKS: Record<string, ProviderQuirks> = {
   standard: standardQuirks,
   slack: slackQuirks,
   github: githubQuirks,
+  google: googleQuirks,
+  salesforce: salesforceQuirks,
   mock: standardQuirks,
 };
 

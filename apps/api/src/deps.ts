@@ -24,7 +24,8 @@ export function createDeps(config: ApiConfig, overrides: Partial<AppDeps> = {}):
     config,
     db: overrides.db ?? db,
     redis,
-    keyProvider: overrides.keyProvider ?? new EnvKeyProvider({ v1: config.masterKey }, 'v1'),
+    keyProvider:
+      overrides.keyProvider ?? new EnvKeyProvider(config.masterKeys, config.masterKeyVersion),
     providerFetch: overrides.providerFetch ?? fetch,
     deliveryQueue,
     close: async () => {

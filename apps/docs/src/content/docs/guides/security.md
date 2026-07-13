@@ -7,7 +7,17 @@ sidebar:
 
 ## Envelope encryption at rest
 
-Every stored secret (API keys, OAuth client secrets, refresh tokens, signing keys) gets its own AES-256-GCM data key, wrapped by a master key (`CONNECT_MASTER_KEY`, with a KMS-ready `KeyProvider` interface). **AAD binds each ciphertext to its row** (`table:rowId:kind`), so ciphertexts cannot be swapped between records. Key versions enable rotation.
+Every stored secret (API keys, OAuth client secrets, refresh tokens, signing keys) gets its own AES-256-GCM data key, wrapped by a master key. **AAD binds each ciphertext to its row** (`table:rowId:kind`), so ciphertexts cannot be swapped between records.
+
+Three `KeyProvider` backends are available via `CONNECT_KEY_PROVIDER`:
+
+- **`env`** (default) — the master key comes from `CONNECT_MASTER_KEY` (version `v1`); additional versions can be introduced with `CONNECT_MASTER_KEYS` + `CONNECT_MASTER_KEY_VERSION`.
+- **`aws-kms`** — 32-byte KEKs are generated locally, wrapped by an AWS KMS key (`CONNECT_KMS_KEY_ID`), and persisted in the `master_keys` table. Boot performs one KMS `Decrypt` per key version; the KMS is never on the hot path of a token mint.
+- **`gcp-kms`** — same design against Google Cloud KMS, authenticated with a service account.
+
+## Master-key rotation
+
+`pnpm --filter @connect/api rotate-key` runs the rotation job: for KMS providers it mints and activates a new KEK version, then re-wraps every stored data key to the current version (the data ciphertexts themselves are untouched, so rotation is cheap and idempotent). The job reports which key versions are still referenced; once the old version disappears from that list it can be scheduled for KMS deletion (or dropped from `CONNECT_MASTER_KEYS` for the env provider). Cached tokens encrypted under an old version self-heal: decryption failure is treated as a cache miss.
 
 ## No plaintext bearer secrets in the database
 

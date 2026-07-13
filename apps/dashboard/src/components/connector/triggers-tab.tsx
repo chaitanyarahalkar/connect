@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -21,7 +22,14 @@ import {
 } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
 import { DELIVERY_BADGE } from '@/lib/labels';
-import type { Connector, CreatedTrigger, Delivery, Trigger } from '@/lib/types';
+import type {
+  Connector,
+  CreatedTrigger,
+  Delivery,
+  DeliveryDetail,
+  DeliveryStatus,
+  Trigger,
+} from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 import { formatDateTime, relativeTime } from '@/lib/utils';
 
@@ -249,10 +257,13 @@ export function TriggersTab({ connector }: { connector: Connector }) {
 
 function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () => void }) {
   const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<DeliveryStatus | 'all'>('all');
   const { data, loading, error, refetch } = useApi<{ deliveries: Delivery[] }>(
-    `/v1/triggers/${trigger.id}/deliveries`,
+    `/v1/triggers/${trigger.id}/deliveries${statusFilter === 'all' ? '' : `?status=${statusFilter}`}`,
   );
   const [redelivering, setRedelivering] = useState<string | null>(null);
+  const [draining, setDraining] = useState(false);
+  const [inspecting, setInspecting] = useState<Delivery | null>(null);
 
   const redeliver = async (delivery: Delivery) => {
     setRedelivering(delivery.id);
@@ -267,7 +278,28 @@ function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () 
     }
   };
 
+  const drain = async () => {
+    setDraining(true);
+    try {
+      const res = await apiFetch<{ drained: number }>(`/v1/triggers/${trigger.id}/drain`, {
+        method: 'POST',
+        body: {},
+      });
+      toast(
+        res.drained === 0
+          ? 'No dead-letter deliveries to drain'
+          : `Re-queued ${res.drained} dead ${res.drained === 1 ? 'delivery' : 'deliveries'}`,
+      );
+      refetch();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : String(err), 'error');
+    } finally {
+      setDraining(false);
+    }
+  };
+
   const deliveries = data?.deliveries ?? [];
+  const deadCount = deliveries.filter((d) => d.status === 'dead').length;
 
   return (
     <Dialog
@@ -277,6 +309,23 @@ function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () 
       description="Recent webhook fan-out attempts for this destination."
       wide
     >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as DeliveryStatus | 'all')}
+          className="max-w-40"
+        >
+          <option value="all">All statuses</option>
+          <option value="dead">Dead</option>
+          <option value="failed">Failed</option>
+          <option value="succeeded">Succeeded</option>
+          <option value="pending">Pending</option>
+          <option value="delivering">Delivering</option>
+        </Select>
+        <Button variant="outline" size="sm" loading={draining} onClick={() => void drain()}>
+          Drain dead letters{deadCount > 0 && statusFilter === 'all' ? ` (${deadCount})` : ''}
+        </Button>
+      </div>
       <div className="max-h-96 overflow-y-auto">
         {error ? (
           <ErrorText error={error} onRetry={refetch} />
@@ -284,7 +333,9 @@ function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () 
           <Spinner label="Loading deliveries…" />
         ) : deliveries.length === 0 ? (
           <p className="py-6 text-center text-sm text-zinc-500">
-            No deliveries yet. Send a webhook to the ingest URL to see them here.
+            {statusFilter === 'all'
+              ? 'No deliveries yet. Send a webhook to the ingest URL to see them here.'
+              : `No ${statusFilter} deliveries.`}
           </p>
         ) : (
           <Table>
@@ -318,16 +369,21 @@ function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () 
                     {relativeTime(d.deliveredAt ?? d.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {d.status === 'failed' || d.status === 'dead' || d.status === 'succeeded' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        loading={redelivering === d.id}
-                        onClick={() => void redeliver(d)}
-                      >
-                        Redeliver
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setInspecting(d)}>
+                        Inspect
                       </Button>
-                    ) : null}
+                      {d.status === 'failed' || d.status === 'dead' || d.status === 'succeeded' ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={redelivering === d.id}
+                          onClick={() => void redeliver(d)}
+                        >
+                          Redeliver
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -341,6 +397,74 @@ function DeliveriesDialog({ trigger, onClose }: { trigger: Trigger; onClose: () 
         </Button>
         <Button onClick={onClose}>Close</Button>
       </div>
+      {inspecting ? (
+        <DeliveryDetailDialog
+          delivery={inspecting}
+          onClose={() => setInspecting(null)}
+          onRedeliver={() => {
+            setInspecting(null);
+            void redeliver(inspecting);
+          }}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function DeliveryDetailDialog({
+  delivery,
+  onClose,
+  onRedeliver,
+}: {
+  delivery: Delivery;
+  onClose: () => void;
+  onRedeliver: () => void;
+}) {
+  const { data, loading, error, refetch } = useApi<{ delivery: DeliveryDetail }>(
+    `/v1/deliveries/${delivery.id}`,
+  );
+  const detail = data?.delivery;
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title="Delivery detail"
+      description={`Delivery ${delivery.id}`}
+      wide
+    >
+      {error ? (
+        <ErrorText error={error} onRetry={refetch} />
+      ) : loading || !detail ? (
+        <Spinner label="Loading delivery…" />
+      ) : (
+        <div className="space-y-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={DELIVERY_BADGE[detail.status]}>{detail.status}</Badge>
+            <span className="text-zinc-500">
+              {detail.attempts} attempt{detail.attempts === 1 ? '' : 's'}
+              {detail.responseStatus ? ` · last response ${detail.responseStatus}` : ''}
+              {detail.event.signatureValid ? '' : ' · provider signature invalid'}
+            </span>
+          </div>
+          <div className="font-mono text-xs text-zinc-600">
+            {detail.event.type ?? 'unknown event'} → {detail.destinationUrl}
+          </div>
+          {detail.lastError ? <p className="text-xs text-red-600">{detail.lastError}</p> : null}
+          <div>
+            <p className="mb-1 font-medium text-zinc-900">Payload</p>
+            <pre className="max-h-64 overflow-auto rounded-lg border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs">
+              {JSON.stringify(detail.event.payload, null, 2)}
+            </pre>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onRedeliver}>
+              Redeliver
+            </Button>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

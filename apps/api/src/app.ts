@@ -6,6 +6,7 @@ import { type AuthEnv, authMiddleware, type SessionResolver } from './auth/middl
 import type { AppDeps } from './deps.js';
 import { errorHandler } from './errors.js';
 import { accessTokenRoutes } from './routes/access-tokens.js';
+import { billingRoutes } from './routes/billing.js';
 import { connectorRoutes } from './routes/connectors.js';
 import { linkRoutes } from './routes/links.js';
 import { oauthAuthorizeRoutes, oauthCallbackRoutes } from './routes/oauth.js';
@@ -14,7 +15,12 @@ import { orgRoutes } from './routes/org.js';
 import { orgManageRoutes } from './routes/orgs-manage.js';
 import { projectRoutes } from './routes/projects.js';
 import { tokenRoutes } from './routes/tokens.js';
-import { connectorTriggerRoutes, deliveryRoutes, triggerRoutes } from './routes/triggers.js';
+import {
+  connectorTriggerRoutes,
+  deliveryRoutes,
+  triggerDrainRoutes,
+  triggerRoutes,
+} from './routes/triggers.js';
 import { webhookIngestRoutes } from './webhooks/ingest.js';
 
 export interface BuildAppOptions {
@@ -57,11 +63,13 @@ export function buildApp(deps: AppDeps, opts: BuildAppOptions = {}) {
   v1.route('/connectors', oauthAuthorizeRoutes(deps));
   v1.route('/connectors', connectorTriggerRoutes(deps));
   v1.route('/connectors', connectorRoutes(deps));
+  v1.route('/triggers', triggerDrainRoutes(deps, deps.deliveryQueue));
   v1.route('/triggers', triggerRoutes(deps, deps.deliveryQueue));
   v1.route('/deliveries', deliveryRoutes(deps, deps.deliveryQueue));
   v1.route('/projects', projectRoutes(deps));
   v1.route('/links', linkRoutes(deps));
   v1.route('/access-tokens', accessTokenRoutes(deps));
+  v1.route('/billing', billingRoutes(deps));
   v1.route('/', orgRoutes(deps));
   app.route('/v1', v1);
 

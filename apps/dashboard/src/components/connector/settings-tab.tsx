@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
-import type { Connector } from '@/lib/types';
+import type { Connector, TokenPolicy } from '@/lib/types';
 
 interface SecretFields {
   oauthClientId: string;
@@ -19,6 +19,7 @@ interface SecretFields {
   githubAppId: string;
   githubAppPrivateKey: string;
   slackSigningSecret: string;
+  snowflakePrivateKey: string;
 }
 
 const EMPTY: SecretFields = {
@@ -29,6 +30,7 @@ const EMPTY: SecretFields = {
   githubAppId: '',
   githubAppPrivateKey: '',
   slackSigningSecret: '',
+  snowflakePrivateKey: '',
 };
 
 export function ConnectorSettingsTab({
@@ -104,7 +106,7 @@ export function ConnectorSettingsTab({
   const setSecret = (key: keyof SecretFields, value: string) =>
     setSecrets((prev) => ({ ...prev, [key]: value }));
 
-  const isOauthLike = connector.type !== 'api_key';
+  const isOauthLike = connector.type !== 'api_key' && connector.type !== 'snowflake';
 
   return (
     <div className="space-y-4">
@@ -181,6 +183,18 @@ export function ConnectorSettingsTab({
                 onChange={(v) => setSecret('slackSigningSecret', v)}
               />
             ) : null}
+            {connector.type === 'snowflake' ? (
+              <div>
+                <Label>RSA private key (PKCS#8 PEM)</Label>
+                <textarea
+                  value={secrets.snowflakePrivateKey}
+                  onChange={(e) => setSecret('snowflakePrivateKey', e.target.value)}
+                  rows={4}
+                  placeholder="-----BEGIN PRIVATE KEY-----"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-xs focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                />
+              </div>
+            ) : null}
             <SecretField
               label="Webhook secret"
               value={secrets.webhookSecret}
@@ -193,6 +207,8 @@ export function ConnectorSettingsTab({
           </form>
         </CardContent>
       </Card>
+
+      <TokenPolicyCard connector={connector} onUpdated={onUpdated} />
 
       <Card className="border-red-200">
         <CardHeader>
@@ -216,6 +232,146 @@ export function ConnectorSettingsTab({
         description={`Permanently delete "${connector.name}"? This cannot be undone.`}
       />
     </div>
+  );
+}
+
+const SUBJECT_TYPES = ['app', 'user', 'jwt-bearer'] as const;
+
+function TokenPolicyCard({
+  connector,
+  onUpdated,
+}: {
+  connector: Connector;
+  onUpdated: () => void;
+}) {
+  const { toast } = useToast();
+  const policy = connector.tokenPolicy ?? {};
+
+  const [maxTtl, setMaxTtl] = useState(policy.maxTtlSeconds ? String(policy.maxTtlSeconds) : '');
+  const [scopes, setScopes] = useState(policy.allowedScopes?.join(', ') ?? '');
+  const [subjects, setSubjects] = useState<string[]>(policy.allowedSubjects ?? []);
+  const [rateLimit, setRateLimit] = useState(
+    policy.rateLimit ? String(policy.rateLimit.limit) : '',
+  );
+  const [rateWindow, setRateWindow] = useState(
+    policy.rateLimit ? String(policy.rateLimit.windowSeconds) : '60',
+  );
+  const [saving, setSaving] = useState(false);
+
+  const toggleSubject = (s: string) =>
+    setSubjects((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    const scopeList = scopes
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const next: TokenPolicy = {
+      ...(maxTtl ? { maxTtlSeconds: Number(maxTtl) } : {}),
+      ...(scopeList.length ? { allowedScopes: scopeList } : {}),
+      ...(subjects.length
+        ? { allowedSubjects: subjects as NonNullable<TokenPolicy['allowedSubjects']> }
+        : {}),
+      ...(rateLimit
+        ? { rateLimit: { limit: Number(rateLimit), windowSeconds: Number(rateWindow || '60') } }
+        : {}),
+    };
+    setSaving(true);
+    try {
+      await apiFetch(`/v1/connectors/${connector.id}`, {
+        method: 'PATCH',
+        body: { tokenPolicy: Object.keys(next).length ? next : null },
+      });
+      toast('Token policy saved');
+      onUpdated();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : String(err), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Token policy</CardTitle>
+        <CardDescription>
+          Limits enforced on every token request: lifetime cap, scope/subject allow-lists, and a
+          per-installation rate limit. Leave fields empty for no restriction.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={(e) => void save(e)} className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="policy-ttl">Max token TTL (seconds)</Label>
+              <Input
+                id="policy-ttl"
+                type="number"
+                min={30}
+                placeholder="unlimited"
+                value={maxTtl}
+                onChange={(e) => setMaxTtl(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="policy-rate">Rate limit (requests)</Label>
+              <Input
+                id="policy-rate"
+                type="number"
+                min={1}
+                placeholder="unlimited"
+                value={rateLimit}
+                onChange={(e) => setRateLimit(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="policy-window">…per window (seconds)</Label>
+              <Input
+                id="policy-window"
+                type="number"
+                min={1}
+                max={3600}
+                value={rateWindow}
+                disabled={!rateLimit}
+                onChange={(e) => setRateWindow(e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="policy-scopes">Allowed scopes (comma-separated)</Label>
+            <Input
+              id="policy-scopes"
+              placeholder="any scope"
+              value={scopes}
+              onChange={(e) => setScopes(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Allowed subjects</Label>
+            <div className="flex gap-4 pt-1">
+              {SUBJECT_TYPES.map((s) => (
+                <label key={s} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={subjects.includes(s)}
+                    onChange={() => toggleSubject(s)}
+                  />
+                  {s}
+                </label>
+              ))}
+              <span className="text-xs text-zinc-500 self-center">
+                (none checked = all allowed)
+              </span>
+            </div>
+          </div>
+          <Button type="submit" loading={saving}>
+            Save policy
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

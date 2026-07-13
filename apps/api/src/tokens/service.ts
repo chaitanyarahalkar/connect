@@ -14,6 +14,8 @@ import {
   mintApiKeyToken,
 } from './minters.js';
 import { mintOAuth2Token } from './oauth2-minter.js';
+import { clampTtl, enforceRateLimit, enforceTokenPolicy, tokenPolicyOf } from './policy.js';
+import { mintSnowflakeToken } from './snowflake-minter.js';
 
 const minters: Record<ConnectorRow['type'], Minter> = {
   api_key: mintApiKeyToken,
@@ -21,6 +23,8 @@ const minters: Record<ConnectorRow['type'], Minter> = {
   github: mintGithubToken,
   // Slack minting is plain OAuth refresh; the slack-ness lives in quirks.
   slack: mintOAuth2Token,
+  // Snowflake KEYPAIR_JWTs are signed locally from the stored private key.
+  snowflake: mintSnowflakeToken,
 };
 
 export async function requestToken(
@@ -33,6 +37,9 @@ export async function requestToken(
   const installation = await resolveInstallation(deps, connector, req);
 
   const scopes = req.scopes ?? [];
+  const policy = tokenPolicyOf(connector);
+  enforceTokenPolicy(policy, req, scopes);
+  await enforceRateLimit(deps.redis, policy, connector.id, installation?.id ?? null);
   const key = cacheKey({
     connectorId: connector.id,
     installationId: installation?.id ?? null,
@@ -96,7 +103,7 @@ async function mint(
       `connector type ${connector.type} is not supported yet`,
     );
   }
-  return minter({
+  const minted = await minter({
     deps,
     connector,
     installation,
@@ -105,6 +112,8 @@ async function mint(
     resource: req.resource,
     authorizationDetails: req.authorizationDetails,
   });
+  // clamped before caching, so the cache entry expires with the policy TTL too
+  return clampTtl(minted, tokenPolicyOf(connector));
 }
 
 async function resolveConnector(
@@ -166,7 +175,8 @@ async function resolveInstallation(
   connector: ConnectorRow,
   req: TokenRequest,
 ): Promise<InstallationRow | null> {
-  if (connector.type === 'api_key') return null;
+  // credential-holding connector types have no per-tenant installation
+  if (connector.type === 'api_key' || connector.type === 'snowflake') return null;
 
   // jwt-bearer exchanges carry their own identity; an installation is optional
   if (req.subject.type === 'jwt-bearer' && !req.installationId) return null;

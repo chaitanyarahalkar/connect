@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const environmentSchema = z.enum(['production', 'preview', 'development']);
 export type Environment = z.infer<typeof environmentSchema>;
 
-export const connectorTypeSchema = z.enum(['oauth2', 'api_key', 'github', 'slack']);
+export const connectorTypeSchema = z.enum(['oauth2', 'api_key', 'github', 'slack', 'snowflake']);
 export type ConnectorType = z.infer<typeof connectorTypeSchema>;
 
 export const roleSchema = z.enum(['owner', 'admin', 'member']);
@@ -33,6 +33,46 @@ export const oauthConfigSchema = z.object({
 });
 export type OAuthConfig = z.infer<typeof oauthConfigSchema>;
 
+/**
+ * Snowflake key-pair connectors: Connect holds the RSA private key and mints
+ * KEYPAIR_JWTs locally — a JWT exchange with no provider round-trip.
+ */
+export const snowflakeConfigSchema = z.object({
+  /** Account identifier ("xy12345" or "xy12345.us-east-1" — locator part is used). */
+  account: z.string().min(1),
+  /** Snowflake user the key pair is registered on (RSA_PUBLIC_KEY). */
+  username: z.string().min(1),
+  /** JWT lifetime in seconds (Snowflake caps at 1 hour). */
+  tokenTtlSeconds: z.number().int().min(60).max(3600).default(3600),
+});
+export type SnowflakeConfig = z.infer<typeof snowflakeConfigSchema>;
+
+/**
+ * Per-connector token policy, enforced on every POST /v1/tokens:
+ * subject/scope allow-lists, a cap on returned token lifetime, and an
+ * installation-scoped fixed-window rate limit.
+ */
+export const tokenPolicySchema = z.object({
+  /** Cap on returned token lifetime (seconds); longer-lived results are clamped. */
+  maxTtlSeconds: z.number().int().min(30).max(86_400).optional(),
+  /** Scopes a caller may request. Absent = no restriction. */
+  allowedScopes: z.array(z.string()).optional(),
+  /** Subject types a caller may use. Absent = no restriction. */
+  allowedSubjects: z.array(z.enum(['app', 'user', 'jwt-bearer'])).optional(),
+  /**
+   * Token requests allowed per installation per window (cache hits count).
+   * Requests without an installation (api_key, bare jwt-bearer) share one
+   * connector-wide bucket.
+   */
+  rateLimit: z
+    .object({
+      limit: z.number().int().min(1),
+      windowSeconds: z.number().int().min(1).max(3600),
+    })
+    .optional(),
+});
+export type TokenPolicy = z.infer<typeof tokenPolicySchema>;
+
 export const brandingSchema = z.object({
   iconUrl: z.string().url().optional(),
   color: z
@@ -47,7 +87,10 @@ export const createConnectorSchema = z.object({
   name: z.string().min(1).max(120),
   type: connectorTypeSchema,
   oauthConfig: oauthConfigSchema.optional(),
+  /** Non-OAuth provider configuration (snowflake: SnowflakeConfig). */
+  providerConfig: z.record(z.unknown()).optional(),
   branding: brandingSchema.optional(),
+  tokenPolicy: tokenPolicySchema.optional(),
   /** Write-only secrets supplied at create time. Never returned. */
   secrets: z
     .object({
@@ -58,6 +101,7 @@ export const createConnectorSchema = z.object({
       githubAppId: z.string().optional(),
       githubAppPrivateKey: z.string().optional(),
       slackSigningSecret: z.string().optional(),
+      snowflakePrivateKey: z.string().optional(),
     })
     .optional(),
 });

@@ -5,6 +5,7 @@ export const TYPE_LABELS: Record<ConnectorType, string> = {
   api_key: 'API key',
   github: 'GitHub',
   slack: 'Slack',
+  snowflake: 'Snowflake',
 };
 
 export const INSTALLATION_BADGE: Record<InstallationStatus, 'success' | 'warning' | 'destructive'> =

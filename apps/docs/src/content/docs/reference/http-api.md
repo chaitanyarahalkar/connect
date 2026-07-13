@@ -57,7 +57,9 @@ Reads require `member` role, mutations `admin`, unless noted. Workload principal
 | --- | --- |
 | `GET /v1/connectors/:id/triggers` · `POST /v1/connectors/:id/triggers` | List · create (returns `whsec_` secret once) |
 | `PATCH /v1/triggers/:id` · `DELETE /v1/triggers/:id` | Toggle/rename · delete |
-| `GET /v1/triggers/:id/deliveries` | Delivery history with per-attempt status |
+| `GET /v1/triggers/:id/deliveries` | Delivery history with per-attempt status (`?status=dead,failed&limit=200`) |
+| `POST /v1/triggers/:id/drain` | Dead-letter drain: re-queue every `dead` delivery, returns `{ drained }` |
+| `GET /v1/deliveries/:id` | Full delivery detail incl. event payload, headers, and destination |
 | `POST /v1/deliveries/:id/redeliver` | Reset and re-enqueue a delivery |
 
 ### Projects & links
@@ -73,3 +75,14 @@ Reads require `member` role, mutations `admin`, unless noted. Workload principal
 | Route | Purpose |
 | --- | --- |
 | `GET /v1/access-tokens` · `POST /v1/access-tokens` · `DELETE /v1/access-tokens/:id` | List · create PAT (plaintext once) · revoke |
+
+### Billing
+
+Built on `usage_events`; plans (`free`/`pro`/`scale`) are defined in `@connect/shared`.
+
+| Route | Purpose |
+| --- | --- |
+| `GET /v1/billing` | Plan, plan catalog, current-period usage totals, and the projected invoice |
+| `PATCH /v1/billing/plan` | Change the org's plan (owner only, audited) |
+| `GET /v1/billing/invoices` | List generated invoices |
+| `POST /v1/billing/invoices/generate` | Generate/refresh an invoice (`{ period: "YYYY-MM" }`, default last month); open periods stay `draft` and regenerate, closed periods finalize (owner only) |

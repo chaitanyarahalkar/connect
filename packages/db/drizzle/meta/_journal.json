@@ -8,6 +8,34 @@
       "when": 1783949287572,
       "tag": "0000_chunky_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783970869423,
+      "tag": "0001_massive_pestilence",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783971455989,
+      "tag": "0002_simple_ezekiel_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783971813258,
+      "tag": "0003_early_husk",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783972518961,
+      "tag": "0004_square_dexter_bennett",
+      "breakpoints": true
     }
   ]
 }

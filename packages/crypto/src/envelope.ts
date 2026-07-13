@@ -30,21 +30,24 @@ export interface KeyProvider {
   unwrapDek(wrapped: Buffer, keyVersion: string): Buffer;
 }
 
-/** KEK from a base64-encoded 32-byte env value (CONNECT_MASTER_KEY). */
-export class EnvKeyProvider implements KeyProvider {
-  private keys: Map<string, Buffer>;
+/**
+ * Base for providers that hold KEK bytes in memory, keyed by version. DEKs are
+ * wrapped locally with AES-256-GCM; subclasses differ only in where the KEK
+ * bytes come from (env vars, a KMS-decrypted blob, …).
+ */
+export class KekChain implements KeyProvider {
+  protected keys: Map<string, Buffer>;
   keyVersion: string;
 
   /**
-   * @param keys map of version -> base64 key. `current` names the version used
+   * @param keys map of version -> 32-byte KEK. `current` names the version used
    * for new wraps; older versions remain available for unwrapping.
    */
-  constructor(keys: Record<string, string>, current: string) {
+  constructor(keys: Record<string, Buffer>, current: string) {
     this.keys = new Map();
-    for (const [version, b64] of Object.entries(keys)) {
-      const key = Buffer.from(b64, 'base64');
+    for (const [version, key] of Object.entries(keys)) {
       if (key.length !== 32) {
-        throw new Error(`master key "${version}" must be 32 bytes (base64), got ${key.length}`);
+        throw new Error(`master key "${version}" must be 32 bytes, got ${key.length}`);
       }
       this.keys.set(version, key);
     }
@@ -52,10 +55,9 @@ export class EnvKeyProvider implements KeyProvider {
     this.keyVersion = current;
   }
 
-  static fromEnv(env: NodeJS.ProcessEnv = process.env): EnvKeyProvider {
-    const key = env.CONNECT_MASTER_KEY;
-    if (!key) throw new Error('CONNECT_MASTER_KEY is not set');
-    return new EnvKeyProvider({ v1: key }, 'v1');
+  /** Versions this provider can unwrap. */
+  get versions(): string[] {
+    return [...this.keys.keys()];
   }
 
   private key(version: string): Buffer {
@@ -80,6 +82,32 @@ export class EnvKeyProvider implements KeyProvider {
     const decipher = createDecipheriv('aes-256-gcm', kek, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(ct), decipher.final()]);
+  }
+}
+
+/** KEK from base64-encoded 32-byte env values (CONNECT_MASTER_KEY[S]). */
+export class EnvKeyProvider extends KekChain {
+  /** @param keys map of version -> base64 key. */
+  constructor(keys: Record<string, string>, current: string) {
+    const decoded: Record<string, Buffer> = {};
+    for (const [version, b64] of Object.entries(keys)) {
+      decoded[version] = Buffer.from(b64, 'base64');
+    }
+    super(decoded, current);
+  }
+
+  /**
+   * Reads CONNECT_MASTER_KEY (always version "v1"). Additional versions may be
+   * supplied via CONNECT_MASTER_KEYS (JSON: {"v2":"<base64>"}); the wrap
+   * version defaults to v1 and is overridden by CONNECT_MASTER_KEY_VERSION.
+   */
+  static fromEnv(env: NodeJS.ProcessEnv = process.env): EnvKeyProvider {
+    const key = env.CONNECT_MASTER_KEY;
+    if (!key) throw new Error('CONNECT_MASTER_KEY is not set');
+    const extra = env.CONNECT_MASTER_KEYS
+      ? (JSON.parse(env.CONNECT_MASTER_KEYS) as Record<string, string>)
+      : {};
+    return new EnvKeyProvider({ v1: key, ...extra }, env.CONNECT_MASTER_KEY_VERSION ?? 'v1');
   }
 }
 
@@ -123,4 +151,19 @@ export function decryptSecret(kp: KeyProvider, aad: string, blob: EncryptedBlob)
 
 export function secretAad(table: string, rowId: string, kind: string): string {
   return `${table}:${rowId}:${kind}`;
+}
+
+/**
+ * Re-wraps a blob's DEK under the provider's current KEK. The data ciphertext
+ * (and therefore the plaintext) is untouched — master-key rotation only needs
+ * to unwrap the DEK with the old version and wrap it with the new one.
+ */
+export function rewrapSecret(kp: KeyProvider, blob: EncryptedBlob): EncryptedBlob {
+  if (blob.keyVersion === kp.keyVersion) return blob;
+  const dek = kp.unwrapDek(Buffer.from(blob.wrappedDek, 'base64'), blob.keyVersion);
+  try {
+    return { ...blob, wrappedDek: kp.wrapDek(dek).toString('base64'), keyVersion: kp.keyVersion };
+  } finally {
+    dek.fill(0);
+  }
 }

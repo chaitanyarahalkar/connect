@@ -15,10 +15,19 @@ export function loadDotEnv(env: NodeJS.ProcessEnv = process.env): void {
   }
 }
 
+export type KeyProviderKind = 'env' | 'aws-kms' | 'gcp-kms';
+
 export interface ApiConfig {
   databaseUrl: string;
   redisUrl: string;
-  masterKey: string;
+  /** Which KeyProvider wraps DEKs: env master key(s) or a remote KMS. */
+  keyProvider: KeyProviderKind;
+  /** Env-provider KEKs by version ({ v1: <base64>, … }). Empty when a KMS is used. */
+  masterKeys: Record<string, string>;
+  /** Version used for new wraps by the env provider. */
+  masterKeyVersion: string;
+  /** Remote KMS key (ARN / resource name) when keyProvider is aws-kms/gcp-kms. */
+  kmsKeyId?: string;
   issuer: string;
   port: number;
   dashboardUrl: string;
@@ -33,10 +42,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     if (!v) throw new Error(`missing required env var ${name}`);
     return v;
   };
+  const keyProvider = (env.CONNECT_KEY_PROVIDER ?? 'env') as KeyProviderKind;
+  if (!['env', 'aws-kms', 'gcp-kms'].includes(keyProvider)) {
+    throw new Error(`CONNECT_KEY_PROVIDER must be env, aws-kms or gcp-kms, got "${keyProvider}"`);
+  }
+  const masterKeys: Record<string, string> =
+    keyProvider === 'env'
+      ? {
+          v1: required('CONNECT_MASTER_KEY'),
+          ...(env.CONNECT_MASTER_KEYS
+            ? (JSON.parse(env.CONNECT_MASTER_KEYS) as Record<string, string>)
+            : {}),
+        }
+      : {};
   return {
     databaseUrl: env.DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect',
     redisUrl: env.REDIS_URL ?? 'redis://localhost:6379',
-    masterKey: required('CONNECT_MASTER_KEY'),
+    keyProvider,
+    masterKeys,
+    masterKeyVersion: env.CONNECT_MASTER_KEY_VERSION ?? 'v1',
+    kmsKeyId: keyProvider === 'env' ? undefined : required('CONNECT_KMS_KEY_ID'),
     issuer: env.CONNECT_ISSUER ?? 'http://localhost:4000',
     port: Number(env.PORT ?? env.API_PORT ?? 4000),
     dashboardUrl: env.DASHBOARD_URL ?? 'http://localhost:3000',

@@ -58,3 +58,7 @@ Verify by recomputing the HMAC over the **raw request body** with your `whsec_` 
 Non-2xx responses are retried up to **5 attempts with exponential backoff (base 10s)**. Delivery status progresses `pending → delivering → succeeded | failed | dead`; final failures are marked `dead` and can be redelivered manually (`POST /v1/deliveries/:id/redeliver`), which resets the attempt counter and re-enqueues.
 
 Every delivery is metered (`webhook_delivery` usage events) and visible in the dashboard's Deliveries dialog with per-attempt status.
+
+## Replay & dead-letter drains
+
+The Deliveries dialog (connector → Triggers → Deliveries) shows the fan-out log with a status filter, per-delivery **Inspect** (full event payload, response status, last error via `GET /v1/deliveries/:id`) and **Redeliver** actions, and a **Drain dead letters** button. Draining (`POST /v1/triggers/:id/drain`) re-queues every `dead` delivery for the trigger in one shot and returns the count; failed deliveries still owned by the retry queue are untouched. Each drain is audit-logged (`trigger.drain`).

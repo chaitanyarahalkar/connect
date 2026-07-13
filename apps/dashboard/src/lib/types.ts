@@ -4,10 +4,11 @@ import type {
   Environment,
   OAuthConfig,
   Role,
+  TokenPolicy,
   TokenResponse,
 } from '@connect/shared';
 
-export type { Branding, ConnectorType, Environment, OAuthConfig, Role, TokenResponse };
+export type { Branding, ConnectorType, Environment, OAuthConfig, Role, TokenPolicy, TokenResponse };
 
 export interface Org {
   id: string;
@@ -31,6 +32,7 @@ export interface Connector {
   status: ConnectorStatus;
   branding: Branding | null;
   oauthConfig: Partial<OAuthConfig> | null;
+  tokenPolicy: TokenPolicy | null;
   clientId: string | null;
   ingestKey: string;
   createdAt: string;
@@ -137,4 +139,25 @@ export interface Delivery {
   deliveredAt: string | null;
   createdAt: string;
   eventType: string | null;
+}
+
+export interface DeliveryDetail {
+  id: string;
+  status: DeliveryStatus;
+  attempts: number;
+  responseStatus: number | null;
+  lastError: string | null;
+  nextRetryAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  trigger: { id: string; name: string };
+  destinationUrl: string;
+  event: {
+    id: string;
+    type: string | null;
+    signatureValid: boolean;
+    receivedAt: string;
+    payload: unknown;
+    headers: Record<string, string>;
+  };
 }

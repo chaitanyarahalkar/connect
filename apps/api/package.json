@@ -8,7 +8,8 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --pool=forks",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "rotate-key": "tsx scripts/rotate-master-key.ts"
   },
   "dependencies": {
     "@connect/connectors": "workspace:*",
