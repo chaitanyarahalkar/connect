@@ -1,10 +1,10 @@
-import type { OAuthConfig } from '@connect/shared';
 import {
+  type ProviderQuirks,
   parseStandardTokenResponse,
   quirksFor,
-  type ProviderQuirks,
   type TokenSet,
 } from '@connect/connectors';
+import type { OAuthConfig } from '@connect/shared';
 
 /**
  * Generic OAuth 2.0 / OIDC engine. Pure functions, fetch injected — provider

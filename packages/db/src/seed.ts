@@ -1,3 +1,5 @@
+import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
+import { eq } from 'drizzle-orm';
 import { createDb } from './client.js';
 import { newId } from './ids.js';
 import {
@@ -9,8 +11,6 @@ import {
   projects,
   user,
 } from './schema.js';
-import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
-import { eq } from 'drizzle-orm';
 
 /**
  * Seeds a demo org with a mock-OAuth connector, an api-key connector, a
@@ -121,9 +121,11 @@ export async function seed(databaseUrl: string, masterKey: string) {
   };
 }
 
-const invokedDirectly = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
+const invokedDirectly =
+  process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
 if (invokedDirectly) {
-  const databaseUrl = process.env.DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect';
+  const databaseUrl =
+    process.env.DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect';
   const masterKey = process.env.CONNECT_MASTER_KEY;
   if (!masterKey) {
     console.error('CONNECT_MASTER_KEY required');

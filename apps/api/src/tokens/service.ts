@@ -1,14 +1,19 @@
-import { and, eq, or } from 'drizzle-orm';
 import { connectors, installations, newId, projectLinks, tokenIssuances } from '@connect/db';
 import { ConnectError, type TokenRequest, type TokenResponse } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import type { Principal } from '../auth/principal.js';
+import { and, eq, or } from 'drizzle-orm';
 import { meterUsage } from '../audit.js';
-import { TokenCache, cacheKey, type CachedToken } from './cache.js';
-import { singleFlight } from './lock.js';
-import { mintApiKeyToken, type ConnectorRow, type InstallationRow, type Minter } from './minters.js';
-import { mintOAuth2Token } from './oauth2-minter.js';
+import type { Principal } from '../auth/principal.js';
+import type { AppDeps } from '../deps.js';
+import { type CachedToken, cacheKey, TokenCache } from './cache.js';
 import { mintGithubToken } from './github-minter.js';
+import { singleFlight } from './lock.js';
+import {
+  type ConnectorRow,
+  type InstallationRow,
+  type Minter,
+  mintApiKeyToken,
+} from './minters.js';
+import { mintOAuth2Token } from './oauth2-minter.js';
 
 const minters: Record<ConnectorRow['type'], Minter> = {
   api_key: mintApiKeyToken,
@@ -86,7 +91,10 @@ async function mint(
 ): Promise<CachedToken> {
   const minter = minters[connector.type];
   if (!minter) {
-    throw new ConnectError('provider_error', `connector type ${connector.type} is not supported yet`);
+    throw new ConnectError(
+      'provider_error',
+      `connector type ${connector.type} is not supported yet`,
+    );
   }
   return minter({
     deps,
@@ -167,7 +175,9 @@ async function resolveInstallation(
     const [row] = await deps.db
       .select()
       .from(installations)
-      .where(and(eq(installations.id, req.installationId), eq(installations.connectorId, connector.id)))
+      .where(
+        and(eq(installations.id, req.installationId), eq(installations.connectorId, connector.id)),
+      )
       .limit(1);
     if (!row) throw new ConnectError('not_found', `installation ${req.installationId} not found`);
     if (row.status === 'revoked') {
@@ -235,7 +245,12 @@ async function recordIssuance(
     scopes: result.scopes,
     cacheHit,
     expiresAt: new Date(result.expiresAt),
-    requestedBy: principal.kind === 'workload' ? 'oidc' : principal.kind === 'access_token' ? 'pat' : 'session',
+    requestedBy:
+      principal.kind === 'workload'
+        ? 'oidc'
+        : principal.kind === 'access_token'
+          ? 'pat'
+          : 'session',
   });
   await meterUsage(deps.db, {
     orgId: principal.orgId,

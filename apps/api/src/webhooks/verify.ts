@@ -36,7 +36,8 @@ export function verifySlackSignature(
   const signature = headers['x-slack-signature'];
   if (!timestamp || !signature) return { valid: false, reason: 'missing slack headers' };
   const age = Math.abs(now / 1000 - Number(timestamp));
-  if (!Number.isFinite(age) || age > 300) return { valid: false, reason: 'timestamp outside window' };
+  if (!Number.isFinite(age) || age > 300)
+    return { valid: false, reason: 'timestamp outside window' };
   const base = `v0:${timestamp}:${rawBody.toString('utf8')}`;
   const expected = `v0=${createHmac('sha256', secret).update(base).digest('hex')}`;
   return safeEqual(signature, expected)
@@ -50,7 +51,8 @@ export function verifyGenericSignature(
   headers: Record<string, string | undefined>,
   secret: string,
 ): VerificationResult {
-  const header = headers['x-webhook-signature'] ?? headers['x-connect-signature'] ?? headers['x-mock-signature'];
+  const header =
+    headers['x-webhook-signature'] ?? headers['x-connect-signature'] ?? headers['x-mock-signature'];
   if (!header) return { valid: false, reason: 'missing signature header' };
   const expected = `sha256=${createHmac('sha256', secret).update(rawBody).digest('hex')}`;
   return safeEqual(header, expected)

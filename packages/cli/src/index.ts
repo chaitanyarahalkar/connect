@@ -1,9 +1,11 @@
-import { Command } from 'commander';
-import { intro, outro, password, text, select, isCancel } from '@clack/prompts';
+import { intro, isCancel, outro, password, select, text } from '@clack/prompts';
 import { ConnectClient, getToken } from '@connect/sdk';
-import { loadCliConfig, requireCliConfig, saveCliConfig } from './config.js';
+import { Command } from 'commander';
+import { requireCliConfig, saveCliConfig } from './config.js';
 
-const program = new Command('connect').description('Connect CLI — manage connectors and request tokens');
+const program = new Command('connect').description(
+  'Connect CLI — manage connectors and request tokens',
+);
 
 function client(): ConnectClient {
   const cfg = requireCliConfig();
@@ -19,10 +21,16 @@ function fail(err: unknown): never {
 program
   .command('login')
   .description('authenticate with a personal access token')
-  .option('--api-url <url>', 'Connect API base URL', process.env.CONNECT_API_URL ?? 'http://localhost:4000')
+  .option(
+    '--api-url <url>',
+    'Connect API base URL',
+    process.env.CONNECT_API_URL ?? 'http://localhost:4000',
+  )
   .action(async (opts: { apiUrl: string }) => {
     intro('connect login');
-    const token = await password({ message: `paste an access token for ${opts.apiUrl} (cn_pat_…)` });
+    const token = await password({
+      message: `paste an access token for ${opts.apiUrl} (cn_pat_…)`,
+    });
     if (isCancel(token) || !token) process.exit(1);
     const probe = new ConnectClient({ baseUrl: opts.apiUrl, auth: token });
     const me = await probe
@@ -37,22 +45,28 @@ program
   .description('show the current identity')
   .action(async () => {
     const me = await client()
-      .get<{ principal: { kind: string; role: string }; organization: { name: string; slug: string } }>('/v1/me')
+      .get<{
+        principal: { kind: string; role: string };
+        organization: { name: string; slug: string };
+      }>('/v1/me')
       .catch(fail);
-    console.log(`${me.organization.name} (${me.organization.slug}) — ${me.principal.kind}, role ${me.principal.role}`);
+    console.log(
+      `${me.organization.name} (${me.organization.slug}) — ${me.principal.kind}, role ${me.principal.role}`,
+    );
   });
 
 const connectors = program.command('connectors').description('manage connectors');
 
-connectors
-  .command('list')
-  .action(async () => {
-    const { connectors: rows } = await client()
-      .get<{ connectors: { slug: string; name: string; type: string; status: string; id: string }[] }>('/v1/connectors')
-      .catch(fail);
-    if (!rows.length) return console.log('no connectors yet — `connect connectors create`');
-    for (const c of rows) console.log(`${c.slug.padEnd(24)} ${c.type.padEnd(8)} ${c.status.padEnd(9)} ${c.id}`);
-  });
+connectors.command('list').action(async () => {
+  const { connectors: rows } = await client()
+    .get<{
+      connectors: { slug: string; name: string; type: string; status: string; id: string }[];
+    }>('/v1/connectors')
+    .catch(fail);
+  if (!rows.length) return console.log('no connectors yet — `connect connectors create`');
+  for (const c of rows)
+    console.log(`${c.slug.padEnd(24)} ${c.type.padEnd(8)} ${c.status.padEnd(9)} ${c.id}`);
+});
 
 connectors
   .command('create')
@@ -63,7 +77,10 @@ connectors
     if (isCancel(name)) process.exit(1);
     const slug = await text({
       message: 'slug',
-      initialValue: String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      initialValue: String(name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
     });
     if (isCancel(slug)) process.exit(1);
     const type = await select({
@@ -135,13 +152,20 @@ program
   .argument('<connector>')
   .action(async (connector: string) => {
     const { installations } = await client()
-      .get<{ installations: { id: string; status: string; externalAccountName: string | null; externalAccountId: string | null }[] }>(
-        `/v1/connectors/${encodeURIComponent(connector)}/installations`,
-      )
+      .get<{
+        installations: {
+          id: string;
+          status: string;
+          externalAccountName: string | null;
+          externalAccountId: string | null;
+        }[];
+      }>(`/v1/connectors/${encodeURIComponent(connector)}/installations`)
       .catch(fail);
     if (!installations.length) return console.log('no installations — run `connect authorize`');
     for (const i of installations) {
-      console.log(`${i.id}  ${i.status.padEnd(8)} ${i.externalAccountName ?? i.externalAccountId ?? ''}`);
+      console.log(
+        `${i.id}  ${i.status.padEnd(8)} ${i.externalAccountName ?? i.externalAccountId ?? ''}`,
+      );
     }
   });
 
@@ -153,24 +177,33 @@ program
   .option('--installation <id>')
   .option('--user <userId>', 'user subject')
   .option('--json', 'print the full response as JSON')
-  .action(async (connector: string, opts: { scopes?: string; installation?: string; user?: string; json?: boolean }) => {
-    const cfg = requireCliConfig();
-    const result = await getToken(
-      {
-        connector,
-        scopes: opts.scopes?.split(','),
-        installationId: opts.installation,
-        subject: opts.user ? { type: 'user', userId: opts.user } : { type: 'app' },
-      },
-      { baseUrl: cfg.apiUrl, auth: cfg.token },
-    ).catch(fail);
-    if (opts.json) {
-      console.log(JSON.stringify({ ...result, expiresAt: result.expiresAt.toISOString() }, null, 2));
-    } else {
-      console.log(result.token);
-      console.error(`expires ${result.expiresAt.toISOString()}  scopes=[${result.scopes.join(' ')}]`);
-    }
-  });
+  .action(
+    async (
+      connector: string,
+      opts: { scopes?: string; installation?: string; user?: string; json?: boolean },
+    ) => {
+      const cfg = requireCliConfig();
+      const result = await getToken(
+        {
+          connector,
+          scopes: opts.scopes?.split(','),
+          installationId: opts.installation,
+          subject: opts.user ? { type: 'user', userId: opts.user } : { type: 'app' },
+        },
+        { baseUrl: cfg.apiUrl, auth: cfg.token },
+      ).catch(fail);
+      if (opts.json) {
+        console.log(
+          JSON.stringify({ ...result, expiresAt: result.expiresAt.toISOString() }, null, 2),
+        );
+      } else {
+        console.log(result.token);
+        console.error(
+          `expires ${result.expiresAt.toISOString()}  scopes=[${result.scopes.join(' ')}]`,
+        );
+      }
+    },
+  );
 
 program
   .command('projects')

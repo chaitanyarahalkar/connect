@@ -1,5 +1,5 @@
+import { ConnectAuthError, clearTokenCache, getToken } from '@connect/sdk';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { getToken, clearTokenCache, ConnectAuthError } from '@connect/sdk';
 import {
   appFetch,
   authed,
@@ -7,8 +7,8 @@ import {
   ensureMigrated,
   json,
   resetState,
-  seedOrg,
   type SeededOrg,
+  seedOrg,
   type TestHarness,
 } from './helpers.js';
 

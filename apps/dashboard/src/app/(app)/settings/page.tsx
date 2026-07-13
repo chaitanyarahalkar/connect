@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { useApi } from '@/lib/use-api';
-import { apiFetch } from '@/lib/api';
-import { formatDate, formatDateTime, relativeTime } from '@/lib/utils';
-import type { AccessToken, AuditLog, Member } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { type FormEvent, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { SecretReveal } from '@/components/secret-reveal';
+import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog } from '@/components/ui/dialog';
-import { Tabs, TabPanel } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -19,10 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { SecretReveal } from '@/components/secret-reveal';
-import { useToast } from '@/components/toast';
+import { TabPanel, Tabs } from '@/components/ui/tabs';
+import { apiFetch } from '@/lib/api';
+import type { AccessToken, AuditLog, Member } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
+import { formatDate, formatDateTime, relativeTime } from '@/lib/utils';
 
 const TABS = [
   { id: 'tokens', label: 'Access Tokens' },
@@ -110,9 +110,7 @@ function AccessTokensTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-zinc-500">
-          Personal access tokens for the Connect CLI and API.
-        </p>
+        <p className="text-sm text-zinc-500">Personal access tokens for the Connect CLI and API.</p>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           Create token
         </Button>
@@ -276,7 +274,9 @@ function MembersTab() {
 }
 
 function AuditLogTab() {
-  const { data, loading, error, refetch } = useApi<{ logs: AuditLog[] }>('/v1/audit-logs?limit=100');
+  const { data, loading, error, refetch } = useApi<{ logs: AuditLog[] }>(
+    '/v1/audit-logs?limit=100',
+  );
   const logs = data?.logs ?? [];
 
   if (error) return <ErrorText error={error} onRetry={refetch} />;
@@ -313,7 +313,9 @@ function AuditLogTab() {
             <TableCell className="font-mono text-xs">
               {log.targetType ? `${log.targetType}:${log.targetId ?? ''}` : '—'}
             </TableCell>
-            <TableCell title={formatDateTime(log.createdAt)}>{relativeTime(log.createdAt)}</TableCell>
+            <TableCell title={formatDateTime(log.createdAt)}>
+              {relativeTime(log.createdAt)}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

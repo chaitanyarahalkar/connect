@@ -1,13 +1,8 @@
-import { describe, expect, it } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import {
-  EnvKeyProvider,
-  decryptSecret,
-  encryptSecret,
-  secretAad,
-} from '../src/envelope.js';
+import { describe, expect, it } from 'vitest';
+import { decryptSecret, EnvKeyProvider, encryptSecret, secretAad } from '../src/envelope.js';
 import { generateSecret, hashSecret, verifySecret } from '../src/hash.js';
-import { JwtSigner, generateSigningKey } from '../src/jwt.js';
+import { generateSigningKey, JwtSigner } from '../src/jwt.js';
 
 const key = () => randomBytes(32).toString('base64');
 
@@ -74,7 +69,9 @@ describe('envelope encryption', () => {
 
   it('rejects unknown key versions', () => {
     const blob = encryptSecret(kp, aad, 'value');
-    expect(() => decryptSecret(kp, aad, { ...blob, keyVersion: 'v9' })).toThrow(/unknown key version/);
+    expect(() => decryptSecret(kp, aad, { ...blob, keyVersion: 'v9' })).toThrow(
+      /unknown key version/,
+    );
   });
 });
 
@@ -85,7 +82,7 @@ describe('secret hashing', () => {
     expect(s.prefix).toBe(s.plaintext.slice(0, 12));
     expect(s.hash).toBe(hashSecret(s.plaintext));
     expect(verifySecret(s.plaintext, s.hash)).toBe(true);
-    expect(verifySecret(s.plaintext + 'x', s.hash)).toBe(false);
+    expect(verifySecret(`${s.plaintext}x`, s.hash)).toBe(false);
   });
 });
 
@@ -96,7 +93,10 @@ describe('JwtSigner', () => {
       { sub: 'project:p1:env:production', org_id: 'org_1' },
       { issuer: 'http://localhost:4000', audience: 'connect', ttlSeconds: 600 },
     );
-    const payload = await signer.verify(jwt, { issuer: 'http://localhost:4000', audience: 'connect' });
+    const payload = await signer.verify(jwt, {
+      issuer: 'http://localhost:4000',
+      audience: 'connect',
+    });
     expect(payload.sub).toBe('project:p1:env:production');
     expect(payload.org_id).toBe('org_1');
 

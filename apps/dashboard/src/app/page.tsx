@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/auth-client';
-import { apiFetch, storeOrgSlug, getStoredOrgSlug } from '@/lib/api';
-import type { Org } from '@/lib/types';
+import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/feedback';
+import { apiFetch, getStoredOrgSlug, storeOrgSlug } from '@/lib/api';
+import { useSession } from '@/lib/auth-client';
+import type { Org } from '@/lib/types';
 
 export default function IndexPage() {
   const router = useRouter();
@@ -26,8 +26,7 @@ export default function IndexPage() {
           router.replace('/onboarding');
         } else {
           const stored = getStoredOrgSlug();
-          const active =
-            res.organizations.find((o) => o.slug === stored) ?? res.organizations[0];
+          const active = res.organizations.find((o) => o.slug === stored) ?? res.organizations[0];
           if (active) storeOrgSlug(active.slug);
           router.replace('/overview');
         }

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { type ReactNode, useEffect } from 'react';
+import { ErrorText, Spinner } from '@/components/feedback';
+import { OrgSwitcher } from '@/components/org-switcher';
 import { signOut, useSession } from '@/lib/auth-client';
 import { OrgProvider, useOrg } from '@/lib/org-context';
 import { cn } from '@/lib/utils';
-import { Spinner, ErrorText } from '@/components/feedback';
-import { OrgSwitcher } from '@/components/org-switcher';
 
 const NAV = [
   { href: '/overview', label: 'Overview' },
@@ -72,7 +72,9 @@ function Shell({ children }: { children: ReactNode }) {
                 href={item.href}
                 className={cn(
                   'block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
+                  active
+                    ? 'bg-zinc-100 text-zinc-900'
+                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900',
                 )}
               >
                 {item.label}

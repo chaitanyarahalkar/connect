@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
-import { jwtVerify, importSPKI, decodeProtectedHeader } from 'jose';
-import { getToken, clearTokenCache } from '@connect/sdk';
+import { clearTokenCache, getToken } from '@connect/sdk';
+import { decodeProtectedHeader, importSPKI, jwtVerify } from 'jose';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   appFetch,
   authed,
@@ -9,8 +9,8 @@ import {
   ensureMigrated,
   json,
   resetState,
-  seedOrg,
   type SeededOrg,
+  seedOrg,
   type TestHarness,
 } from './helpers.js';
 
@@ -25,13 +25,17 @@ const { publicKey: ghPublicPem, privateKey: ghPrivatePem } = generateKeyPairSync
 });
 
 /** Captures GitHub App token requests and validates the app JWT. */
-const githubCalls: { installationId: string; body: Record<string, unknown>; issuer?: string }[] = [];
+const githubCalls: { installationId: string; body: Record<string, unknown>; issuer?: string }[] =
+  [];
 const githubFetch: typeof fetch = (async (input: unknown, init?: unknown) => {
   const url = String(input);
   const m = url.match(/api\.github\.com\/app\/installations\/(\w+)\/access_tokens/);
   if (m) {
     const req = (init ?? {}) as RequestInit;
-    const jwt = String((req.headers as Record<string, string>).authorization).replace('Bearer ', '');
+    const jwt = String((req.headers as Record<string, string>).authorization).replace(
+      'Bearer ',
+      '',
+    );
     const key = await importSPKI(ghPublicPem, 'RS256');
     const { payload } = await jwtVerify(jwt, key);
     expect(decodeProtectedHeader(jwt).alg).toBe('RS256');
@@ -211,9 +215,7 @@ describe('GitHub App connector', () => {
       '/v1/tokens',
       authed(org.pat, {
         connector: connectorId,
-        authorizationDetails: [
-          { repositories: ['api', 'web'], permissions: { contents: 'read' } },
-        ],
+        authorizationDetails: [{ repositories: ['api', 'web'], permissions: { contents: 'read' } }],
       }),
     );
     expect(res.status).toBe(200);

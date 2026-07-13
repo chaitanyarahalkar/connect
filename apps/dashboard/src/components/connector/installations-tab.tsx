@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { apiFetch } from '@/lib/api';
-import { useApi } from '@/lib/use-api';
-import { formatDate } from '@/lib/utils';
-import { INSTALLATION_BADGE } from '@/lib/labels';
-import type { Connector, Installation } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { type FormEvent, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -19,9 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import { INSTALLATION_BADGE } from '@/lib/labels';
+import type { Connector, Installation } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
+import { formatDate } from '@/lib/utils';
 
 export function InstallationsTab({ connector }: { connector: Connector }) {
   const { toast } = useToast();
@@ -96,9 +96,7 @@ export function InstallationsTab({ connector }: { connector: Connector }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-zinc-500">
-          Accounts that have authorized this connector.
-        </p>
+        <p className="text-sm text-zinc-500">Accounts that have authorized this connector.</p>
         <div className="flex gap-2">
           {connector.type === 'github' ? (
             <Button variant="outline" size="sm" onClick={() => setRegisterOpen(true)}>

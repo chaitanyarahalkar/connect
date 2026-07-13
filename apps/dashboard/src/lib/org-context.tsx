@@ -2,12 +2,12 @@
 
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react';
 import { ApiError, apiFetch, getStoredOrgSlug, storeOrgSlug } from './api';
 import type { Org } from './types';

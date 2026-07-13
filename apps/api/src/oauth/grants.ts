@@ -1,6 +1,6 @@
+import { encryptSecret, type KeyProvider, secretAad } from '@connect/crypto';
+import { type Db, installationGrants, newId } from '@connect/db';
 import { and, eq, isNull, ne } from 'drizzle-orm';
-import { installationGrants, newId, type Db } from '@connect/db';
-import { encryptSecret, secretAad, type KeyProvider } from '@connect/crypto';
 
 type GrantType = (typeof installationGrants.$inferSelect)['grantType'];
 
@@ -22,7 +22,11 @@ export async function storeGrant(
       id,
       installationId,
       grantType,
-      ciphertext: encryptSecret(kp, secretAad('installation_grants', installationId, grantType), value),
+      ciphertext: encryptSecret(
+        kp,
+        secretAad('installation_grants', installationId, grantType),
+        value,
+      ),
       scopes: opts.scopes ?? [],
       expiresAt: opts.expiresAt ?? null,
     });

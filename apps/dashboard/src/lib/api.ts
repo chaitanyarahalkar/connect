@@ -1,15 +1,13 @@
 'use client';
 
 /** Public API origin for webhook/callback URLs shown in the UI. */
-export const PUBLIC_API_URL =
-  process.env.NEXT_PUBLIC_CONNECT_API_URL ?? 'http://localhost:4000';
+export const PUBLIC_API_URL = process.env.NEXT_PUBLIC_CONNECT_API_URL ?? 'http://localhost:4000';
 
 /**
  * Origin used for browser fetch/auth calls. In production we proxy through the
  * dashboard (see next.config rewrites) so session cookies stay first-party.
  */
-export const API_URL =
-  process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' ? '' : PUBLIC_API_URL;
+export const API_URL = process.env.NEXT_PUBLIC_USE_API_PROXY === 'true' ? '' : PUBLIC_API_URL;
 
 const ORG_STORAGE_KEY = 'connect.activeOrgSlug';
 

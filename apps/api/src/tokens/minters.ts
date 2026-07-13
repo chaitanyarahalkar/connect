@@ -1,13 +1,13 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { decryptSecret, type EncryptedBlob, type KeyProvider, secretAad } from '@connect/crypto';
 import {
   connectorSecrets,
-  installationGrants,
-  type Db,
   type connectors,
+  type Db,
+  installationGrants,
   type installations,
 } from '@connect/db';
-import { decryptSecret, secretAad, type EncryptedBlob, type KeyProvider } from '@connect/crypto';
 import { ConnectError, type TokenSubject } from '@connect/shared';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { AppDeps } from '../deps.js';
 import type { CachedToken } from './cache.js';
 
@@ -38,7 +38,11 @@ export async function readConnectorSecret(
     .where(and(eq(connectorSecrets.connectorId, connectorId), eq(connectorSecrets.kind, kind)))
     .limit(1);
   if (!row) return null;
-  return decryptSecret(kp, secretAad('connector_secrets', row.id, kind), row.ciphertext as EncryptedBlob);
+  return decryptSecret(
+    kp,
+    secretAad('connector_secrets', row.id, kind),
+    row.ciphertext as EncryptedBlob,
+  );
 }
 
 export async function getActiveGrant(
@@ -60,7 +64,10 @@ export async function getActiveGrant(
   return row ?? null;
 }
 
-export function decryptGrant(kp: KeyProvider, grant: typeof installationGrants.$inferSelect): string {
+export function decryptGrant(
+  kp: KeyProvider,
+  grant: typeof installationGrants.$inferSelect,
+): string {
   return decryptSecret(
     kp,
     secretAad('installation_grants', grant.installationId, grant.grantType),
@@ -71,7 +78,10 @@ export function decryptGrant(kp: KeyProvider, grant: typeof installationGrants.$
 /** api_key connectors: return the stored credential under a policy TTL. */
 export const mintApiKeyToken: Minter = async ({ deps, connector, subject }) => {
   if (subject.type !== 'app') {
-    throw new ConnectError('unsupported_subject', 'api_key connectors only support the app subject');
+    throw new ConnectError(
+      'unsupported_subject',
+      'api_key connectors only support the app subject',
+    );
   }
   const apiKey = await readConnectorSecret(deps.db, deps.keyProvider, connector.id, 'api_key');
   if (!apiKey) {

@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
-import { slugify, cn } from '@/lib/utils';
-import { TYPE_LABELS } from '@/lib/labels';
-import type { Connector, ConnectorType } from '@/lib/types';
+import { useState } from 'react';
+import { useToast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import { TYPE_LABELS } from '@/lib/labels';
+import type { Connector, ConnectorType } from '@/lib/types';
+import { cn, slugify } from '@/lib/utils';
 
 interface EndpointState {
   authorizationEndpoint: string;
@@ -377,7 +377,10 @@ export default function NewConnectorPage() {
 
             <div className="border-t border-zinc-100 pt-4">
               <p className="mb-3 text-sm font-medium text-zinc-900">
-                Credentials <span className="font-normal text-zinc-500">(write-only, never displayed again)</span>
+                Credentials{' '}
+                <span className="font-normal text-zinc-500">
+                  (write-only, never displayed again)
+                </span>
               </p>
               <div className="space-y-4">
                 {isOauthLike ? (
@@ -473,11 +476,7 @@ export default function NewConnectorPage() {
                 <>
                   <ReviewRow label="Authorize" value={endpoints.authorizationEndpoint} mono />
                   <ReviewRow label="Token" value={endpoints.tokenEndpoint} mono />
-                  <ReviewRow
-                    label="Scopes"
-                    value={endpoints.scopesDefault || '(none)'}
-                    mono
-                  />
+                  <ReviewRow label="Scopes" value={endpoints.scopesDefault || '(none)'} mono />
                   <ReviewRow label="PKCE" value={endpoints.pkce ? 'yes' : 'no'} />
                 </>
               ) : null}

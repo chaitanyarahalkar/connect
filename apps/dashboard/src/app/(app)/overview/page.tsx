@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
-import { useApi } from '@/lib/use-api';
+import { useMemo } from 'react';
+import { ErrorText, Spinner } from '@/components/feedback';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Connector, Project, UsageRow } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Spinner, ErrorText } from '@/components/feedback';
+import { useApi } from '@/lib/use-api';
 
 function isoDay(d: Date): string {
   const iso = d.toISOString();
@@ -83,12 +83,20 @@ export default function OverviewPage() {
             <StatCard
               label="Active connectors"
               value={activeConnectors ?? 0}
-              sub={<Link href="/connectors" className="underline underline-offset-2">view all</Link>}
+              sub={
+                <Link href="/connectors" className="underline underline-offset-2">
+                  view all
+                </Link>
+              }
             />
             <StatCard
               label="Projects"
               value={projects.data?.projects.length ?? 0}
-              sub={<Link href="/projects" className="underline underline-offset-2">view all</Link>}
+              sub={
+                <Link href="/projects" className="underline underline-offset-2">
+                  view all
+                </Link>
+              }
             />
           </div>
 
@@ -103,7 +111,10 @@ export default function OverviewPage() {
               {chart.days.every((d) => d.total === 0) ? (
                 <p className="py-8 text-center text-sm text-zinc-500">
                   No token requests yet this month. Mint one in the{' '}
-                  <Link href="/playground" className="font-medium text-zinc-800 underline underline-offset-2">
+                  <Link
+                    href="/playground"
+                    className="font-medium text-zinc-800 underline underline-offset-2"
+                  >
                     Playground
                   </Link>
                   .
@@ -132,15 +143,7 @@ export default function OverviewPage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: number;
-  sub?: React.ReactNode;
-}) {
+function StatCard({ label, value, sub }: { label: string; value: number; sub?: React.ReactNode }) {
   return (
     <Card>
       <CardContent className="p-5">

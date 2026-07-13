@@ -2,10 +2,11 @@ import { serve } from '@hono/node-server';
 import { loadConfig, loadDotEnv } from './config.js';
 
 loadDotEnv();
-import { createDeps } from './deps.js';
+
 import { buildApp } from './app.js';
-import { createDeliveryWorker } from './webhooks/queue.js';
+import { createDeps } from './deps.js';
 import { logger } from './logger.js';
+import { createDeliveryWorker } from './webhooks/queue.js';
 
 const config = loadConfig();
 const deps = createDeps(config);

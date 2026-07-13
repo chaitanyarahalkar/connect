@@ -1,8 +1,8 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
 import { tokenRequestSchema } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
+import { zValidator } from '@hono/zod-validator';
+import { Hono } from 'hono';
 import type { AuthEnv } from '../auth/middleware.js';
+import type { AppDeps } from '../deps.js';
 import { requestToken } from '../tokens/service.js';
 
 export function tokenRoutes(deps: AppDeps) {

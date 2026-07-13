@@ -1,10 +1,10 @@
-import type { Context, MiddlewareHandler } from 'hono';
-import { and, eq, isNull } from 'drizzle-orm';
-import { accessTokens, memberships, type Db } from '@connect/db';
 import { hashSecret } from '@connect/crypto';
+import { accessTokens, type Db, memberships } from '@connect/db';
 import { ConnectError, type Role } from '@connect/shared';
-import { hasRole, type Principal } from './principal.js';
+import { and, eq, isNull } from 'drizzle-orm';
+import type { Context, MiddlewareHandler } from 'hono';
 import type { IssuerService } from './issuer.js';
+import { hasRole, type Principal } from './principal.js';
 
 export type SessionResolver = (c: Context) => Promise<Principal | null>;
 

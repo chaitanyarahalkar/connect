@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { createHmac } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
 import {
   signForwardedPayload,
   verifyGenericSignature,
@@ -10,7 +10,7 @@ import {
 const body = Buffer.from(JSON.stringify({ action: 'opened', number: 1 }));
 
 describe('github signatures', () => {
-  const secret = 'It\'s a Secret to Everybody';
+  const secret = "It's a Secret to Everybody";
 
   it('accepts a correctly signed payload', () => {
     const sig = `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
@@ -26,7 +26,9 @@ describe('github signatures', () => {
   it('rejects a tampered body', () => {
     const sig = `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
     const tampered = Buffer.from(body.toString().replace('opened', 'closed'));
-    expect(verifyGithubSignature(tampered, { 'x-hub-signature-256': sig }, secret).valid).toBe(false);
+    expect(verifyGithubSignature(tampered, { 'x-hub-signature-256': sig }, secret).valid).toBe(
+      false,
+    );
   });
 });
 
@@ -58,15 +60,21 @@ describe('slack signatures', () => {
   it('rejects a wrong signing secret', () => {
     const now = Date.now();
     const ts = Math.floor(now / 1000);
-    expect(verifySlackSignature(body, slackHeaders(ts, body, 'wrong'), secret, now).valid).toBe(false);
+    expect(verifySlackSignature(body, slackHeaders(ts, body, 'wrong'), secret, now).valid).toBe(
+      false,
+    );
   });
 });
 
 describe('generic + forwarded signatures', () => {
   it('round-trips: signForwardedPayload output verifies as a generic signature', () => {
     const sig = signForwardedPayload(body, 'whsec_abc');
-    expect(verifyGenericSignature(body, { 'x-webhook-signature': sig }, 'whsec_abc').valid).toBe(true);
-    expect(verifyGenericSignature(body, { 'x-webhook-signature': sig }, 'whsec_other').valid).toBe(false);
+    expect(verifyGenericSignature(body, { 'x-webhook-signature': sig }, 'whsec_abc').valid).toBe(
+      true,
+    );
+    expect(verifyGenericSignature(body, { 'x-webhook-signature': sig }, 'whsec_other').valid).toBe(
+      false,
+    );
   });
 
   it('accepts alternate header names', () => {

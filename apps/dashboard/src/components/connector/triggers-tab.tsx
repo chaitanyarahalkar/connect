@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { apiFetch } from '@/lib/api';
-import { useApi } from '@/lib/use-api';
-import { formatDateTime, relativeTime } from '@/lib/utils';
-import { DELIVERY_BADGE } from '@/lib/labels';
-import type { Connector, CreatedTrigger, Delivery, Trigger } from '@/lib/types';
-import { Button } from '@/components/ui/button';
+import { type FormEvent, useState } from 'react';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState, ErrorText, Spinner } from '@/components/feedback';
+import { SecretReveal } from '@/components/secret-reveal';
+import { useToast } from '@/components/toast';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -19,11 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Spinner, ErrorText, EmptyState } from '@/components/feedback';
-import { ConfirmDialog } from '@/components/confirm-dialog';
-import { SecretReveal } from '@/components/secret-reveal';
-import { useToast } from '@/components/toast';
+import { apiFetch } from '@/lib/api';
+import { DELIVERY_BADGE } from '@/lib/labels';
+import type { Connector, CreatedTrigger, Delivery, Trigger } from '@/lib/types';
+import { useApi } from '@/lib/use-api';
+import { formatDateTime, relativeTime } from '@/lib/utils';
 
 export function TriggersTab({ connector }: { connector: Connector }) {
   const { toast } = useToast();
@@ -123,7 +123,10 @@ export function TriggersTab({ connector }: { connector: Connector }) {
             {triggers.map((trigger) => (
               <TableRow key={trigger.id}>
                 <TableCell className="font-medium text-zinc-900">{trigger.name}</TableCell>
-                <TableCell className="max-w-64 truncate font-mono text-xs" title={trigger.destinationUrl}>
+                <TableCell
+                  className="max-w-64 truncate font-mono text-xs"
+                  title={trigger.destinationUrl}
+                >
                   {trigger.destinationUrl}
                 </TableCell>
                 <TableCell className="font-mono text-xs">{trigger.eventFilter ?? '*'}</TableCell>

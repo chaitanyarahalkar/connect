@@ -7,14 +7,12 @@ export const TYPE_LABELS: Record<ConnectorType, string> = {
   slack: 'Slack',
 };
 
-export const INSTALLATION_BADGE: Record<
-  InstallationStatus,
-  'success' | 'warning' | 'destructive'
-> = {
-  active: 'success',
-  pending: 'warning',
-  revoked: 'destructive',
-};
+export const INSTALLATION_BADGE: Record<InstallationStatus, 'success' | 'warning' | 'destructive'> =
+  {
+    active: 'success',
+    pending: 'warning',
+    revoked: 'destructive',
+  };
 
 export const DELIVERY_BADGE: Record<
   DeliveryStatus,

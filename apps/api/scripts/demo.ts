@@ -6,11 +6,12 @@
  * Prereqs: Postgres + Redis running (docker compose up -d), migrations applied.
  * Run: pnpm demo
  */
-import { spawn, type ChildProcess } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
+import { createHmac, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
-import { randomBytes, createHmac } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
 import {
   accessTokens,
   connectors,
@@ -23,8 +24,7 @@ import {
   user,
 } from '@connect/db';
 import { storeSeedSecret } from '@connect/db/seed-secrets';
-import { EnvKeyProvider, generateSecret, randomToken } from '@connect/crypto';
-import { getToken, clearTokenCache } from '@connect/sdk';
+import { clearTokenCache, getToken } from '@connect/sdk';
 import { loadDotEnv } from '../src/config.js';
 
 // Use the repo .env when present so the master key stays stable across runs
@@ -34,7 +34,8 @@ loadDotEnv();
 const API = 'http://localhost:4000';
 const MOCK = 'http://localhost:4100';
 const RECEIVER_PORT = 4200;
-const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect';
+const DATABASE_URL =
+  process.env.DATABASE_URL ?? 'postgres://connect:connect@localhost:5432/connect';
 const MASTER_KEY = process.env.CONNECT_MASTER_KEY ?? randomBytes(32).toString('base64');
 
 const apiDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,7 +49,7 @@ function ok(msg: string) {
   process.stdout.write(`  ✔ ${msg}\n`);
 }
 
-function spawnService(name: string, cwd: string, entry: string, env: Record<string, string>) {
+function spawnService(_name: string, cwd: string, entry: string, env: Record<string, string>) {
   const child = spawn('pnpm', ['tsx', entry], {
     cwd,
     env: { ...process.env, ...env },
@@ -104,7 +105,9 @@ async function seedDemoOrg() {
   await db.insert(memberships).values({ id: newId.membership(), orgId, userId, role: 'owner' });
 
   const projectId = newId.project();
-  await db.insert(projects).values({ id: projectId, orgId, name: 'Demo App', slug: `demo-app-${suffix}` });
+  await db
+    .insert(projects)
+    .values({ id: projectId, orgId, name: 'Demo App', slug: `demo-app-${suffix}` });
 
   const apiKeyConnectorId = newId.connector();
   await db.insert(connectors).values({
@@ -143,7 +146,12 @@ async function seedDemoOrg() {
   await storeSeedSecret(db, kp, oauthConnectorId, 'webhook_secret', webhookSecret);
 
   await db.insert(projectLinks).values([
-    { id: newId.link(), projectId, connectorId: apiKeyConnectorId, environments: ['production', 'development'] },
+    {
+      id: newId.link(),
+      projectId,
+      connectorId: apiKeyConnectorId,
+      environments: ['production', 'development'],
+    },
     { id: newId.link(), projectId, connectorId: oauthConnectorId, environments: ['production'] },
   ]);
 
@@ -158,7 +166,15 @@ async function seedDemoOrg() {
   });
 
   await sql.end();
-  return { orgId, projectId, apiKeyConnectorId, oauthConnectorId, ingestKey, webhookSecret, pat: pat.plaintext };
+  return {
+    orgId,
+    projectId,
+    apiKeyConnectorId,
+    oauthConnectorId,
+    ingestKey,
+    webhookSecret,
+    pat: pat.plaintext,
+  };
 }
 
 async function main() {
@@ -207,12 +223,17 @@ async function main() {
   if (!providerData.ok) throw new Error('provider rejected minted token');
   ok(`token works against provider API (cached=${t1.cached})`);
 
-  const t2 = (await api('/v1/tokens', seed.pat, { connector: 'mock-oauth' })) as { cached: boolean };
+  const t2 = (await api('/v1/tokens', seed.pat, { connector: 'mock-oauth' })) as {
+    cached: boolean;
+  };
   if (!t2.cached) throw new Error('expected cache hit');
   ok('second request served from encrypted Redis cache');
 
   step('oauth: force a refresh (rotating refresh token)');
-  const t3 = (await api('/v1/tokens', seed.pat, { connector: 'mock-oauth', scopes: ['write'] })) as {
+  const t3 = (await api('/v1/tokens', seed.pat, {
+    connector: 'mock-oauth',
+    scopes: ['write'],
+  })) as {
     token: string;
   };
   const refreshedWorks = await fetch(`${MOCK}/api/data`, {
@@ -234,7 +255,8 @@ async function main() {
       client_secret: client.client.clientSecret,
     }),
   });
-  if (!oidc.ok) throw new Error(`client-credentials exchange failed: ${oidc.status} ${await oidc.text()}`);
+  if (!oidc.ok)
+    throw new Error(`client-credentials exchange failed: ${oidc.status} ${await oidc.text()}`);
   const { access_token } = (await oidc.json()) as { access_token: string };
   const viaWorkload = (await api('/v1/tokens', access_token, { connector: 'internal-api' })) as {
     token: string;
@@ -267,20 +289,26 @@ async function main() {
       event: { type: 'demo.event', hello: 'world' },
     }),
   });
-  if (!(await sent.json() as { delivered: boolean }).delivered) throw new Error('ingest rejected webhook');
+  if (!((await sent.json()) as { delivered: boolean }).delivered)
+    throw new Error('ingest rejected webhook');
 
   const deadline = Date.now() + 15_000;
   while (!received.length && Date.now() < deadline) await new Promise((r) => setTimeout(r, 200));
   if (!received.length) throw new Error('delivery never arrived');
   const delivery = received[0]!;
   const expected = `sha256=${createHmac('sha256', trig.trigger.signingSecret).update(delivery.body).digest('hex')}`;
-  if (delivery.headers['connect-signature'] !== expected) throw new Error('forwarded signature invalid');
+  if (delivery.headers['connect-signature'] !== expected)
+    throw new Error('forwarded signature invalid');
   ok('webhook verified at ingest, fanned out, and signed for the destination');
 
   step('usage metering');
   const usage = (await api('/v1/usage', seed.pat)) as { daily: { kind: string; total: number }[] };
-  const tokens = usage.daily.filter((d) => d.kind === 'token_request').reduce((s, d) => s + d.total, 0);
-  const hooks = usage.daily.filter((d) => d.kind === 'webhook_delivery').reduce((s, d) => s + d.total, 0);
+  const tokens = usage.daily
+    .filter((d) => d.kind === 'token_request')
+    .reduce((s, d) => s + d.total, 0);
+  const hooks = usage.daily
+    .filter((d) => d.kind === 'webhook_delivery')
+    .reduce((s, d) => s + d.total, 0);
   ok(`metered ${tokens} token requests, ${hooks} webhook deliveries`);
 
   console.log('\n🎉 demo complete — every core flow verified end to end\n');

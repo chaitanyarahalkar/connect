@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 export function Dialog({
@@ -31,11 +31,7 @@ export function Dialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-zinc-950/40"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-zinc-950/40" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"

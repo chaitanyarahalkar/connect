@@ -1,12 +1,12 @@
-import { Queue, Worker, type JobsOptions } from 'bullmq';
-import { Redis } from 'ioredis';
-import { eq } from 'drizzle-orm';
+import { decryptSecret, type EncryptedBlob, secretAad } from '@connect/crypto';
 import { triggers, webhookDeliveries, webhookEvents } from '@connect/db';
-import { decryptSecret, secretAad, type EncryptedBlob } from '@connect/crypto';
-import type { AppDeps } from '../deps.js';
+import { type JobsOptions, Queue, Worker } from 'bullmq';
+import { eq } from 'drizzle-orm';
+import { Redis } from 'ioredis';
 import { meterUsage } from '../audit.js';
-import { signForwardedPayload } from './verify.js';
+import type { AppDeps } from '../deps.js';
 import { logger } from '../logger.js';
+import { signForwardedPayload } from './verify.js';
 
 export const DELIVERY_QUEUE = 'webhook-deliveries';
 const MAX_ATTEMPTS = 5;
@@ -118,7 +118,11 @@ export function createDeliveryWorker(deps: AppDeps, opts: { concurrency?: number
 
       const orgId = await orgIdForConnector(deps, event.connectorId);
       if (orgId) {
-        await meterUsage(deps.db, { orgId, connectorId: event.connectorId, kind: 'webhook_delivery' });
+        await meterUsage(deps.db, {
+          orgId,
+          connectorId: event.connectorId,
+          kind: 'webhook_delivery',
+        });
       }
     },
     {
@@ -127,7 +131,10 @@ export function createDeliveryWorker(deps: AppDeps, opts: { concurrency?: number
     },
   );
   worker.on('failed', (job, err) => {
-    logger.warn({ deliveryId: job?.data.deliveryId, err: err.message }, 'webhook delivery attempt failed');
+    logger.warn(
+      { deliveryId: job?.data.deliveryId, err: err.message },
+      'webhook delivery attempt failed',
+    );
   });
   return worker;
 }

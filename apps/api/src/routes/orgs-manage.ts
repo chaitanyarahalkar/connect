@@ -1,13 +1,13 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { eq } from 'drizzle-orm';
 import { memberships, newId, organizations } from '@connect/db';
 import { ConnectError, slugSchema } from '@connect/shared';
-import type { AppDeps } from '../deps.js';
-import type { AuthEnv } from '../auth/middleware.js';
+import { zValidator } from '@hono/zod-validator';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
+import type { AuthEnv } from '../auth/middleware.js';
 import { isUniqueViolation } from '../db-errors.js';
+import type { AppDeps } from '../deps.js';
 
 /** Org bootstrap: list my orgs / create one. Session users only. */
 export function orgManageRoutes(deps: AppDeps) {
@@ -15,7 +15,8 @@ export function orgManageRoutes(deps: AppDeps) {
 
   app.get('/', async (c) => {
     const principal = c.get('principal');
-    if (principal.kind === 'workload') throw new ConnectError('forbidden', 'workloads cannot list orgs');
+    if (principal.kind === 'workload')
+      throw new ConnectError('forbidden', 'workloads cannot list orgs');
     if (principal.kind === 'access_token') {
       const [org] = await deps.db
         .select()
@@ -70,7 +71,10 @@ export function orgManageRoutes(deps: AppDeps) {
         targetId: orgId,
         metadata: { slug: input.slug },
       });
-      return c.json({ organization: { id: orgId, name: input.name, slug: input.slug, role: 'owner' } }, 201);
+      return c.json(
+        { organization: { id: orgId, name: input.name, slug: input.slug, role: 'owner' } },
+        201,
+      );
     },
   );
 

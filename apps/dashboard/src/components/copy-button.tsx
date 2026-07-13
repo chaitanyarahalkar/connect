@@ -42,10 +42,7 @@ export function CopyField({ value, mono = true }: { value: string; mono?: boolea
   return (
     <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
       <code
-        className={cn(
-          'min-w-0 flex-1 truncate text-xs text-zinc-800',
-          mono && 'font-mono',
-        )}
+        className={cn('min-w-0 flex-1 truncate text-xs text-zinc-800', mono && 'font-mono')}
         title={value}
       >
         {value}

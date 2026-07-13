@@ -1,16 +1,16 @@
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
-import { connectors, newId, triggers, webhookDeliveries, webhookEvents } from '@connect/db';
 import { encryptSecret, randomToken, secretAad } from '@connect/crypto';
+import { connectors, newId, triggers, webhookDeliveries, webhookEvents } from '@connect/db';
 import { ConnectError } from '@connect/shared';
+import { zValidator } from '@hono/zod-validator';
 import type { Queue } from 'bullmq';
-import type { AppDeps } from '../deps.js';
-import { requireRole, type AuthEnv } from '../auth/middleware.js';
+import { desc, eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { z } from 'zod';
 import { writeAudit } from '../audit.js';
-import { findConnector } from './connectors.js';
+import { type AuthEnv, requireRole } from '../auth/middleware.js';
+import type { AppDeps } from '../deps.js';
 import { DELIVERY_JOB_OPTIONS, type DeliveryJob } from '../webhooks/queue.js';
+import { findConnector } from './connectors.js';
 
 /** Trigger CRUD nested under connectors. */
 export function connectorTriggerRoutes(deps: AppDeps) {
@@ -92,7 +92,7 @@ export function connectorTriggerRoutes(deps: AppDeps) {
 }
 
 /** Flat trigger/delivery routes. */
-export function triggerRoutes(deps: AppDeps, queue: Queue<DeliveryJob>) {
+export function triggerRoutes(deps: AppDeps, _queue: Queue<DeliveryJob>) {
   const app = new Hono<AuthEnv>();
 
   app.patch(

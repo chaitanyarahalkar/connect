@@ -23,6 +23,7 @@ export function useApi<T>(path: string | null): UseApiResult<T> {
   const generation = useRef(0);
   const orgSlug = useActiveOrgSlug();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tick and orgSlug intentionally re-trigger the fetch
   useEffect(() => {
     if (path === null) {
       setData(null);
@@ -41,9 +42,7 @@ export function useApi<T>(path: string | null): UseApiResult<T> {
       })
       .catch((err: unknown) => {
         if (generation.current !== gen) return;
-        setError(
-          err instanceof ApiError ? err : new ApiError('internal_error', String(err), 0),
-        );
+        setError(err instanceof ApiError ? err : new ApiError('internal_error', String(err), 0));
         setLoading(false);
       });
   }, [path, tick, orgSlug]);

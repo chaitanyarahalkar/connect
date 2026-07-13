@@ -1,5 +1,5 @@
-import { Hono } from 'hono';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { Hono } from 'hono';
 
 /**
  * A tiny OAuth 2.0 provider used by tests and the demo. Implements the
@@ -101,7 +101,10 @@ export function buildMockProvider(opts: MockProviderOptions = {}) {
           .update(body.code_verifier ?? '')
           .digest('base64url');
         if (expected !== record.codeChallenge) {
-          return c.json({ error: 'invalid_grant', error_description: 'pkce verification failed' }, 400);
+          return c.json(
+            { error: 'invalid_grant', error_description: 'pkce verification failed' },
+            400,
+          );
         }
       }
       state.stats.exchanges++;

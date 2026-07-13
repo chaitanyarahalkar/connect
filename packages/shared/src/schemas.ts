@@ -35,7 +35,10 @@ export type OAuthConfig = z.infer<typeof oauthConfigSchema>;
 
 export const brandingSchema = z.object({
   iconUrl: z.string().url().optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
 });
 export type Branding = z.infer<typeof brandingSchema>;
 

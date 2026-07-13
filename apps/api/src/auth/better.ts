@@ -1,11 +1,11 @@
+import { account, memberships, organizations, session, user, verification } from '@connect/db';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { and, eq, or } from 'drizzle-orm';
-import { memberships, organizations, account, session, user, verification } from '@connect/db';
 import type { Context } from 'hono';
 import type { AppDeps } from '../deps.js';
-import type { Principal } from './principal.js';
 import type { SessionResolver } from './middleware.js';
+import type { Principal } from './principal.js';
 
 const isProd = process.env.NODE_ENV === 'production';
 

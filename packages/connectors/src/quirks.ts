@@ -1,4 +1,3 @@
-import type { OAuthConfig } from '@connect/shared';
 import type { ProviderIdentity, ProviderQuirks, TokenSet } from './types.js';
 
 /** Vanilla RFC 6749 token response. */
@@ -72,8 +71,7 @@ const slackQuirks: ProviderQuirks = {
     const source = typeof raw.access_token === 'string' ? raw : authedUser!;
     return {
       accessToken,
-      refreshToken:
-        typeof source.refresh_token === 'string' ? source.refresh_token : undefined,
+      refreshToken: typeof source.refresh_token === 'string' ? source.refresh_token : undefined,
       expiresIn: typeof source.expires_in === 'number' ? source.expires_in : undefined,
       scope: typeof source.scope === 'string' ? source.scope : undefined,
       raw,
