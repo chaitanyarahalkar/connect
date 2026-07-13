@@ -8,6 +8,7 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+# Migrations also run on container start (see apps/api/Dockerfile).
 
 # PR previews inherit production config; cross-service URLs use Railway
 # reference variables (CONNECT_ISSUER, DASHBOARD_URL) set on the service.

@@ -21,4 +21,4 @@ COPY packages ./packages/
 COPY scripts ./scripts/
 ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm --filter @connect/api start"]
+CMD ["sh", "-c", "pnpm --filter @connect/db migrate && pnpm --filter @connect/api start"]
